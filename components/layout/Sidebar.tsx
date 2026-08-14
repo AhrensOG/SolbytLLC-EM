@@ -7,7 +7,6 @@ import { NAV_ITEMS } from "./nav";
 import { SignOutButton } from "./SignOutButton";
 import { useInvitations } from "@/lib/hooks/useInvitations";
 import { cn } from "@/lib/cn";
-import { ThemeToggle } from "./ThemeToggle";
 
 interface SidebarProps {
   userName?: string | null;
