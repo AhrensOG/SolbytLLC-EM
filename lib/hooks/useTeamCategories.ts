@@ -7,5 +7,6 @@ export function useTeamCategories(teamId: string, params?: { type?: string }) {
   const query = qs.toString();
   return useSWR<Category[]>(
     `/api/teams/${teamId}/categories${query ? `?${query}` : ""}`,
+    { keepPreviousData: true },
   );
 }

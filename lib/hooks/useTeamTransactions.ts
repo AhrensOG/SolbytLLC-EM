@@ -15,5 +15,6 @@ export function useTeamTransactions(teamId: string, filters?: TeamTransactionFil
   const query = qs.toString();
   return useSWR<Transaction[]>(
     `/api/teams/${teamId}/transactions${query ? `?${query}` : ""}`,
+    { keepPreviousData: true },
   );
 }

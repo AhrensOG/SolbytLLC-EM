@@ -20,7 +20,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { PageLoader } from "@/components/ui/Spinner";
+import { ListSkeleton } from "@/components/ui/Skeleton";
 import {
   computeNextDate,
   FREQUENCY_LABELS,
@@ -111,7 +111,7 @@ export function RecurringView({ teamId }: { teamId?: string }) {
     toast.success("Recurrente eliminado");
   }
 
-  if (isLoading) return <PageLoader />;
+  if (isLoading) return <ListSkeleton rows={4} />;
 
   return (
     <div className="flex flex-col gap-4">

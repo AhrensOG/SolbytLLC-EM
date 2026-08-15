@@ -15,5 +15,6 @@ export function useTransactions(filters?: TransactionFilters) {
   const query = qs.toString();
   return useSWR<Transaction[]>(
     `/api/transactions${query ? `?${query}` : ""}`,
+    { keepPreviousData: true },
   );
 }

@@ -10,7 +10,7 @@ import { Select } from "@/components/ui/Select";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { PageLoader } from "@/components/ui/Spinner";
+import { ListSkeleton } from "@/components/ui/Skeleton";
 import type { TeamMemberInfo } from "@/types";
 
 export function MemberList({ teamId, isAdmin }: { teamId: string; isAdmin: boolean }) {
@@ -58,7 +58,7 @@ export function MemberList({ teamId, isAdmin }: { teamId: string; isAdmin: boole
     toast.success("Miembro eliminado del equipo");
   }
 
-  if (isLoading) return <PageLoader />;
+  if (isLoading) return <ListSkeleton rows={4} />;
 
   return (
     <div className="flex flex-col gap-2">

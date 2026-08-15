@@ -8,5 +8,6 @@ export function useTeamStats(teamId: string, month?: string, currencyCode?: stri
   const query = qs.toString();
   return useSWR<TeamStats>(
     `/api/teams/${teamId}/stats${query ? `?${query}` : ""}`,
+    { keepPreviousData: true },
   );
 }

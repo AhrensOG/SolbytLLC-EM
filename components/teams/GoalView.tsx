@@ -11,7 +11,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { PageLoader } from "@/components/ui/Spinner";
+import { Skeleton, ListSkeleton } from "@/components/ui/Skeleton";
 import type { Team } from "@/types";
 
 function clamp(value: number, min: number, max: number) {
@@ -57,7 +57,17 @@ export function GoalView({ teamId, team, isAdmin }: GoalViewProps) {
     goalAmount: number | null;
   } | null>(null);
 
-  if (isLoading) return <PageLoader />;
+  if (isLoading)
+    return (
+      <div className="flex flex-col gap-4">
+        <Card className="space-y-4 p-5">
+          <Skeleton className="h-5 w-40" />
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-2.5 w-full rounded-full" />
+        </Card>
+        <ListSkeleton rows={3} />
+      </div>
+    );
 
   const symbol = goal?.currency.symbol ?? "$";
   const groupProgress = goal?.progress ?? 0;

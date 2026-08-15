@@ -11,7 +11,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { PageLoader } from "@/components/ui/Spinner";
+import { Skeleton } from "@/components/ui/Skeleton";
 
 export function TeamsView() {
   const { data: teams, isLoading } = useTeams();
@@ -41,7 +41,15 @@ export function TeamsView() {
       )}
 
       {isLoading ? (
-        <PageLoader />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Card key={i} className="space-y-3 p-5">
+              <Skeleton className="h-10 w-10 rounded-xl" />
+              <Skeleton className="h-4 w-2/3" />
+              <Skeleton className="h-3 w-1/2" />
+            </Card>
+          ))}
+        </div>
       ) : !teams || teams.length === 0 ? (
         <Card>
           <EmptyState

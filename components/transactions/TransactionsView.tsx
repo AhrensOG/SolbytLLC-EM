@@ -25,7 +25,7 @@ import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
 import { Input } from "@/components/ui/Input";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { PageLoader } from "@/components/ui/Spinner";
+import { ListSkeleton } from "@/components/ui/Skeleton";
 import { Card } from "@/components/ui/Card";
 import type { ShareResult, Transaction } from "@/types";
 import { cn } from "@/lib/cn";
@@ -213,7 +213,7 @@ export function TransactionsView() {
       )}
 
       {isLoading ? (
-        <PageLoader />
+        <ListSkeleton rows={6} />
       ) : !transactions || transactions.length === 0 ? (
         <Card>
           <EmptyState

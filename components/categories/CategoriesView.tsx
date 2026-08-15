@@ -20,7 +20,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { PageLoader } from "@/components/ui/Spinner";
+import { ListSkeleton } from "@/components/ui/Skeleton";
 import type { Category, ShareResult } from "@/types";
 import { cn } from "@/lib/cn";
 
@@ -164,7 +164,7 @@ export function CategoriesView() {
   return (
     <div className="flex flex-col gap-6">
       {isLoading ? (
-        <PageLoader />
+        <ListSkeleton rows={6} />
       ) : income.length === 0 && expense.length === 0 ? (
         <Card>
           <EmptyState

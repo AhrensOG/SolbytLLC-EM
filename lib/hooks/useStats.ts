@@ -6,5 +6,7 @@ export function useStats(month?: string, currencyCode?: string) {
   if (month) qs.set("month", month);
   if (currencyCode) qs.set("currency", currencyCode);
   const query = qs.toString();
-  return useSWR<Stats>(`/api/stats${query ? `?${query}` : ""}`);
+  return useSWR<Stats>(`/api/stats${query ? `?${query}` : ""}`, {
+    keepPreviousData: true,
+  });
 }

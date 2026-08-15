@@ -8,7 +8,7 @@ import { useInvitations } from "@/lib/hooks/useInvitations";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { PageLoader } from "@/components/ui/Spinner";
+import { ListSkeleton } from "@/components/ui/Skeleton";
 
 export function InvitationsView() {
   const { mutate } = useSWRConfig();
@@ -41,7 +41,7 @@ export function InvitationsView() {
     }
   }
 
-  if (isLoading) return <PageLoader />;
+  if (isLoading) return <ListSkeleton rows={3} />;
 
   const pending = (invitations ?? []).filter((i) => i.status === "pending");
 
