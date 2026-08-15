@@ -2,12 +2,16 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSWRConfig } from "swr";
 import { NAV_ITEMS } from "./nav";
+import { NavLinkPending } from "./NavLinkPending";
 import { useInvitations } from "@/lib/hooks/useInvitations";
+import { preloadNavData } from "@/lib/nav-prefetch";
 import { cn } from "@/lib/cn";
 
 export function MobileNav() {
   const pathname = usePathname();
+  const { cache } = useSWRConfig();
   const { data: invitations } = useInvitations();
   const pendingCount =
     invitations?.filter((i) => i.status === "pending").length ?? 0;
@@ -22,8 +26,9 @@ export function MobileNav() {
           <Link
             key={item.href}
             href={item.href}
+            onPointerDown={() => preloadNavData(item.href, (k) => cache.get(k))}
             className={cn(
-              "relative flex min-w-16 shrink-0 flex-col items-center justify-center gap-0.5 whitespace-nowrap rounded-lg px-2 py-1 text-[10px] font-medium transition-colors",
+              "relative flex min-w-16 shrink-0 flex-col items-center justify-center gap-0.5 whitespace-nowrap rounded-lg px-2 py-1 text-[10px] font-medium transition-colors active:scale-95 active:bg-muted",
               active
                 ? "text-primary"
                 : "text-muted-foreground hover:text-foreground",
@@ -31,6 +36,7 @@ export function MobileNav() {
           >
             <item.icon className="h-5 w-5" />
             {item.labelShort ?? item.label}
+            <NavLinkPending />
             {showBadge && (
               <span className="absolute -top-0.5 right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-solbyt-pink-500 px-1 text-[10px] font-semibold text-white">
                 {pendingCount}

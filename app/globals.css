@@ -101,3 +101,40 @@ body {
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
+/* Indicador de navegación pendiente (useLinkStatus) */
+.nav-link-pending {
+  position: absolute;
+  top: 2px;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  margin-left: -3px;
+  border-radius: 9999px;
+  background: currentColor;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.nav-link-pending.is-pending {
+  visibility: visible;
+  animation-name: nav-link-fade-in, nav-link-pulse;
+  animation-duration: 200ms, 1s;
+  animation-delay: 100ms, 100ms;
+  animation-timing-function: ease, ease-in-out;
+  animation-iteration-count: 1, infinite;
+  animation-fill-mode: forwards, none;
+}
+
+@keyframes nav-link-fade-in {
+  to {
+    opacity: 0.5;
+  }
+}
+
+@keyframes nav-link-pulse {
+  50% {
+    opacity: 0.15;
+  }
+}

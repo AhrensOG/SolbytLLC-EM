@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSWRConfig } from "swr";
 import { Wallet } from "lucide-react";
 import { NAV_ITEMS } from "./nav";
 import { SignOutButton } from "./SignOutButton";
 import { useInvitations } from "@/lib/hooks/useInvitations";
+import { preloadNavData } from "@/lib/nav-prefetch";
 import { cn } from "@/lib/cn";
 
 interface SidebarProps {
@@ -14,6 +16,7 @@ interface SidebarProps {
 
 export function Sidebar({ userName }: SidebarProps) {
   const pathname = usePathname();
+  const { cache } = useSWRConfig();
   const { data: invitations } = useInvitations();
   const pendingCount =
     invitations?.filter((i) => i.status === "pending").length ?? 0;
@@ -43,8 +46,9 @@ export function Sidebar({ userName }: SidebarProps) {
             <Link
               key={item.href}
               href={item.href}
+              onPointerDown={() => preloadNavData(item.href, (k) => cache.get(k))}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors active:scale-[0.98] active:bg-muted",
                 active
                   ? "bg-primary text-primary-foreground"
                   : "text-muted-foreground hover:bg-muted hover:text-foreground",
