@@ -6,6 +6,19 @@ export const registerSchema = z.object({
   password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres"),
 });
 
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1, "La contraseña actual es requerida"),
+    newPassword: z
+      .string()
+      .min(6, "La contraseña debe tener al menos 6 caracteres"),
+    confirmPassword: z.string().min(1, "Confirma la nueva contraseña"),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "Las contraseñas no coinciden",
+    path: ["confirmPassword"],
+  });
+
 export const categorySchema = z.object({
   name: z.string().min(1, "El nombre es requerido").trim(),
   type: z.enum(["income", "expense"]),
