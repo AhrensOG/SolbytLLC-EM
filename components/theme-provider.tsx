@@ -20,6 +20,17 @@ const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 
 const STORAGE_KEY = "sexpense-theme";
 
+const THEME_COLORS: Record<Theme, string> = {
+  dark: "#171026",
+  light: "#faf5ff",
+};
+
+function applyThemeColor(theme: Theme) {
+  document
+    .querySelector('meta[name="theme-color"]')
+    ?.setAttribute("content", THEME_COLORS[theme]);
+}
+
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(() => {
     if (typeof window === "undefined") return "dark";
@@ -34,6 +45,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       root.classList.remove("dark");
     }
     window.localStorage.setItem(STORAGE_KEY, theme);
+    applyThemeColor(theme);
   }, [theme]);
 
   const toggleTheme = () => setThemeState((t) => (t === "dark" ? "light" : "dark"));

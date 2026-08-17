@@ -7,8 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "Controla tus gastos personales y compártelos con tu equipo.",
     start_url: "/dashboard",
     display: "standalone",
-    background_color: "#faf5ff",
-    theme_color: "#9333ea",
+    background_color: "#0b0612",
+    theme_color: "#171026",
     icons: [
       {
         src: "/icon.png",
