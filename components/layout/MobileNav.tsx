@@ -17,7 +17,7 @@ export function MobileNav() {
     invitations?.filter((i) => i.status === "pending").length ?? 0;
 
   return (
-    <nav className="no-scrollbar fixed inset-x-0 bottom-0 z-40 flex items-stretch justify-around overflow-x-auto border-t border-border bg-card px-1 py-2 md:hidden">
+    <nav className="no-scrollbar fixed inset-x-0 bottom-0 z-40 flex items-stretch justify-around overflow-x-auto border-t border-border bg-card px-1 pt-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] md:hidden">
       {NAV_ITEMS.map((item) => {
         const active =
           pathname === item.href || pathname.startsWith(`${item.href}/`);
