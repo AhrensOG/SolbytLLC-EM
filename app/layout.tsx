@@ -16,6 +16,11 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "SolbytLLC EM",
   description: "Controla tus gastos personales y compártelos con tu equipo.",
+  appleWebApp: {
+    capable: true,
+    title: "SolbytLLC EM",
+    statusBarStyle: "default",
+  },
 };
 
 const themeInitScript = `
