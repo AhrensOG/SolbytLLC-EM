@@ -6,7 +6,6 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: "Solbyt EM",
     description: "Controla tus gastos personales y compártelos con tu equipo.",
     start_url: "/dashboard",
-    display: "standalone",
     background_color: "#0b0612",
     theme_color: "#171026",
     icons: [
