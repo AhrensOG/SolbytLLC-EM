@@ -23,7 +23,7 @@ export function SplashScreen() {
     <div
       aria-hidden="true"
       className={cn(
-        "fixed inset-0 z-50 flex items-center justify-center bg-background transition-opacity duration-300 md:hidden",
+        "splash-critical fixed inset-0 z-50 flex items-center justify-center bg-background transition-opacity duration-300 md:hidden",
         fading && "pointer-events-none opacity-0",
       )}
     >

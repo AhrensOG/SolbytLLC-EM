@@ -55,6 +55,25 @@ const themeInitScript = `
 })();
 `;
 
+const criticalSplashCss = `
+html { background: #0b0612; }
+html:not(.dark) { background: #faf5ff; }
+body { background: transparent; }
+.splash-critical {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0b0612;
+}
+html:not(.dark) .splash-critical { background: #faf5ff; }
+@media (min-width: 768px) {
+  .splash-critical { display: none; }
+}
+`;
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
@@ -64,6 +83,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <head>
         <meta name="theme-color" content="#171026" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
         {APPLE_SPLASH_LINKS.map((link) => (
           <link
             key={link.src}
@@ -72,7 +92,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             href={link.src}
           />
         ))}
+        <link
+          rel="apple-touch-startup-image"
+          href="/apple-splash-1290x2796.png"
+        />
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+        <style dangerouslySetInnerHTML={{ __html: criticalSplashCss }} />
       </head>
       <body className="min-h-full flex flex-col bg-background text-foreground">
         <SplashScreen />
