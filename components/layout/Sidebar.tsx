@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSWRConfig } from "swr";
+import { useSession } from "next-auth/react";
 import { Wallet } from "lucide-react";
 import { NAV_ITEMS } from "./nav";
 import { SignOutButton } from "./SignOutButton";
@@ -10,16 +11,14 @@ import { useInvitations } from "@/lib/hooks/useInvitations";
 import { preloadNavData } from "@/lib/nav-prefetch";
 import { cn } from "@/lib/cn";
 
-interface SidebarProps {
-  userName?: string | null;
-}
-
-export function Sidebar({ userName }: SidebarProps) {
+export function Sidebar() {
   const pathname = usePathname();
   const { cache } = useSWRConfig();
+  const { data: session } = useSession();
   const { data: invitations } = useInvitations();
   const pendingCount =
     invitations?.filter((i) => i.status === "pending").length ?? 0;
+  const userName = session?.user?.name ?? null;
 
   return (
     <aside className="hidden w-64 shrink-0 flex-col border-r border-border bg-card md:flex">

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { BarChart3 } from "lucide-react";
 import { toast } from "sonner";
 import { useSWRConfig } from "swr";
+import { useSession } from "next-auth/react";
 import { SummaryCards } from "./SummaryCards";
 import { CategoryBreakdown } from "./CategoryBreakdown";
 import { RecentTransactions } from "./RecentTransactions";
@@ -15,7 +16,9 @@ import { useStats } from "@/lib/hooks/useStats";
 import { useDefaultCurrency } from "@/lib/hooks/useDefaultCurrency";
 import { currentMonth } from "@/lib/format";
 
-export function DashboardView({ firstName }: { firstName: string }) {
+export function DashboardView() {
+  const { data: session } = useSession();
+  const firstName = (session?.user?.name ?? "").split(" ")[0];
   const [month, setMonth] = useState(currentMonth());
   const currency = useDefaultCurrency();
   const { data: stats } = useStats(month, currency?.code);
