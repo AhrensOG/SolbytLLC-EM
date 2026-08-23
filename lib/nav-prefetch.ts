@@ -59,3 +59,23 @@ export function preloadNavData(href: string, cacheGet?: CacheGet) {
     preload(key, fetcher);
   }
 }
+
+export function preloadTeamData(teamId: string, cacheGet?: CacheGet) {
+  const keys = [
+    `/api/teams/${teamId}`,
+    `/api/teams/${teamId}/transactions`,
+    `/api/teams/${teamId}/categories`,
+  ];
+  if (cacheGet) {
+    const currency = resolveDefaultCurrency(cacheGet);
+    const month = currentMonth();
+    keys.push(
+      `/api/teams/${teamId}/stats?month=${month}${
+        currency ? `&currency=${currency.code}` : ""
+      }`,
+    );
+  }
+  for (const key of keys) {
+    preload(key, fetcher);
+  }
+}

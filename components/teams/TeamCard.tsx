@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { useSWRConfig } from "swr";
 import { Shield, Target, Users } from "lucide-react";
 import { Card } from "@/components/ui/Card";
+import { preloadTeamData } from "@/lib/nav-prefetch";
 import type { Team } from "@/types";
 
 function clamp(value: number, min: number, max: number) {
@@ -11,6 +13,7 @@ function clamp(value: number, min: number, max: number) {
 }
 
 export function TeamCard({ team, index = 0 }: { team: Team; index?: number }) {
+  const { cache } = useSWRConfig();
   const hasGoal = team.goalAmount != null;
   const pct = hasGoal
     ? Math.round(clamp(((team.progress ?? 0) / (team.goalAmount ?? 1)) * 100, 0, 100))
@@ -22,7 +25,11 @@ export function TeamCard({ team, index = 0 }: { team: Team; index?: number }) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.06, duration: 0.3 }}
     >
-      <Link href={`/teams/${team.id}`} className="block h-full">
+      <Link
+        href={`/teams/${team.id}`}
+        onPointerDown={() => preloadTeamData(team.id, (k) => cache.get(k))}
+        className="block h-full"
+      >
         <Card className="flex h-full flex-col p-5 transition-all hover:-translate-y-0.5 hover:border-primary hover:shadow-md">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">

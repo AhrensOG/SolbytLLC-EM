@@ -17,6 +17,7 @@ import { useDefaultCurrency } from "@/lib/hooks/useDefaultCurrency";
 import { useMe } from "@/lib/hooks/useMe";
 import { currentMonth, formatMoney } from "@/lib/format";
 import { Card } from "@/components/ui/Card";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { MonthSwitcher } from "@/components/ui/MonthSwitcher";
@@ -27,7 +28,7 @@ import { TransactionItem } from "@/components/transactions/TransactionItem";
 export function TeamDashboardView({ teamId }: { teamId: string }) {
   const [month, setMonth] = useState(currentMonth());
   const currency = useDefaultCurrency();
-  const { data: stats, error } = useTeamStats(
+  const { data: stats, error, isLoading: statsLoading } = useTeamStats(
     teamId,
     month,
     currency?.code,
@@ -66,6 +67,37 @@ export function TeamDashboardView({ teamId }: { teamId: string }) {
 
   const members = stats?.byMember ?? [];
   const recent = (transactions ?? []).slice(0, 6);
+
+  if (statsLoading && !stats) {
+    return (
+      <div className="flex flex-col gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Card key={i} className="p-5">
+              <div className="flex items-center justify-between">
+                <Skeleton className="h-4 w-28" />
+                <Skeleton className="h-9 w-9 rounded-lg" />
+              </div>
+              <Skeleton className="mt-3 h-7 w-24" />
+            </Card>
+          ))}
+        </div>
+        <Card className="p-5">
+          <Skeleton className="h-5 w-40" />
+          <Skeleton className="mt-4 h-40 w-full" />
+        </Card>
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <Card className="p-5">
+            <Skeleton className="h-40 w-full" />
+          </Card>
+          <Card className="p-5">
+            <Skeleton className="h-5 w-40" />
+            <Skeleton className="mt-4 h-32 w-full" />
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-4">

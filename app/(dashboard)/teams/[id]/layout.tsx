@@ -1,21 +1,49 @@
-import Link from "next/link";
-import { redirect } from "next/navigation";
-import { ArrowLeft, Shield } from "lucide-react";
-import { getTeamForUser } from "@/lib/team-data";
-import { TeamTabs } from "@/components/teams/TeamTabs";
+"use client";
 
-export default async function TeamLayout({
+import { useEffect } from "react";
+import Link from "next/link";
+import { useParams, useRouter } from "next/navigation";
+import { ArrowLeft, Shield } from "lucide-react";
+import { useTeam } from "@/lib/hooks/useTeam";
+import { TeamTabs } from "@/components/teams/TeamTabs";
+import { Skeleton } from "@/components/ui/Skeleton";
+
+export default function TeamLayout({
   children,
-  params,
 }: {
   children: React.ReactNode;
-  params: Promise<{ id: string }>;
 }) {
-  const { id } = await params;
-  const result = await getTeamForUser(id);
-  if (!result) redirect("/teams");
+  const { id } = useParams<{ id: string }>();
+  const { data: team, isLoading, error } = useTeam(id);
+  const router = useRouter();
 
-  const { team, role } = result;
+  useEffect(() => {
+    if (error && (error as { status?: number }).status) {
+      router.replace("/teams");
+    }
+  }, [error, router]);
+
+  if (isLoading && !team) {
+    return (
+      <div className="flex flex-col gap-5">
+        <Skeleton className="h-4 w-16" />
+        <Skeleton className="h-8 w-2/3" />
+        <Skeleton className="h-4 w-1/3" />
+        <Skeleton className="h-12 w-full rounded-xl" />
+        <Skeleton className="h-40 w-full rounded-xl" />
+      </div>
+    );
+  }
+
+  if (!team) {
+    return (
+      <div className="flex flex-col gap-5">
+        <Skeleton className="h-4 w-16" />
+        <Skeleton className="h-8 w-2/3" />
+        <Skeleton className="h-12 w-full rounded-xl" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-5">
@@ -30,7 +58,7 @@ export default async function TeamLayout({
           <div className="min-w-0">
             <h1 className="flex items-center gap-2 truncate text-2xl font-bold text-foreground">
               {team.name}
-              {role === "admin" && (
+              {team.role === "admin" && (
                 <Shield className="h-5 w-5 shrink-0 text-solbyt-purple-500" />
               )}
             </h1>
