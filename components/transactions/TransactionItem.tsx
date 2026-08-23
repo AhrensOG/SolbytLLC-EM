@@ -68,7 +68,7 @@ export function TransactionItem({
         </span>
 
         {!selectable && (onEdit || onDelete) && (
-          <div className="ml-1 flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+          <div className="ml-1 flex items-center gap-0.5 opacity-100 transition-opacity group-hover:opacity-100 md:opacity-0">
             {onEdit && (
               <button
                 onClick={() => onEdit(transaction)}
