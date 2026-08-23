@@ -33,6 +33,7 @@ export const transactionSchema = z.object({
   description: z.string().trim().optional().default(""),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Fecha inválida"),
   categoryId: z.string().min(1, "La categoría es requerida"),
+  shareTeamIds: z.array(z.string()).max(50).optional().default([]),
 });
 
 export const teamSchema = z.object({

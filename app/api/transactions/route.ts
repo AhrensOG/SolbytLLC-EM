@@ -1,11 +1,12 @@
 import { NextRequest } from "next/server";
 import { Op } from "sequelize";
 import { getSessionUserId } from "@/lib/auth-helpers";
-import { Category, Currency, Transaction } from "@/lib/models";
+import { Category, Currency, TeamMember, Transaction } from "@/lib/models";
 import { serializeTransaction } from "@/lib/serialize";
 import { transactionSchema } from "@/lib/validation";
 import { computeConvertedAmount } from "@/lib/conversion";
-import { handleApiError, json, unauthorized } from "@/lib/api";
+import { copyTransactionToTeams } from "@/lib/share-transaction";
+import { error, handleApiError, json, unauthorized } from "@/lib/api";
 
 export async function GET(req: NextRequest) {
   try {
@@ -62,7 +63,17 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { type, amount, currencyId, description, date, categoryId } = parsed.data;
+    const { type, amount, currencyId, description, date, categoryId, shareTeamIds } =
+      parsed.data;
+
+    if (shareTeamIds.length > 0) {
+      for (const teamId of shareTeamIds) {
+        const member = await TeamMember.findOne({ where: { teamId, userId } });
+        if (!member) {
+          return error("No eres miembro de uno de los equipos seleccionados", 403);
+        }
+      }
+    }
 
     const convertedAmount = await computeConvertedAmount(amount, currencyId);
 
@@ -84,7 +95,18 @@ export async function POST(req: NextRequest) {
       ],
     });
 
-    return json(serializeTransaction(full!), 201);
+    let created = 0;
+    let skipped = 0;
+    if (shareTeamIds.length > 0) {
+      const result = await copyTransactionToTeams(transaction, shareTeamIds);
+      created = result.created;
+      skipped = result.skipped;
+    }
+
+    return json(
+      { transaction: serializeTransaction(full!), created, skipped },
+      201,
+    );
   } catch (err) {
     return handleApiError(err);
   }

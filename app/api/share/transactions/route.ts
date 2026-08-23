@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { requireUserId } from "@/lib/auth-helpers";
 import { TeamMember, Transaction } from "@/lib/models";
 import { shareTransactionsSchema } from "@/lib/validation";
-import { resolveTeamCategory } from "@/lib/team-category";
+import { copyTransactionToTeams } from "@/lib/share-transaction";
 import { error, handleApiError, json } from "@/lib/api";
 
 export async function POST(req: NextRequest) {
@@ -38,37 +38,9 @@ export async function POST(req: NextRequest) {
     let skipped = 0;
 
     for (const tx of transactions) {
-      for (const teamId of teamIds) {
-        const importKey = `imp:${tx.id}:${teamId}`;
-        const exists = await Transaction.findOne({ where: { importKey } });
-        if (exists) {
-          skipped++;
-          continue;
-        }
-
-        const teamCategoryId = await resolveTeamCategory(
-          teamId,
-          tx.categoryId,
-        );
-        if (!teamCategoryId) {
-          skipped++;
-          continue;
-        }
-
-        await Transaction.create({
-          type: tx.type,
-          amount: Number(tx.amount),
-          convertedAmount: Number(tx.convertedAmount ?? 0),
-          currencyId: tx.currencyId,
-          description: tx.description,
-          date: String(tx.date),
-          categoryId: teamCategoryId,
-          userId,
-          teamId,
-          importKey,
-        });
-        created++;
-      }
+      const result = await copyTransactionToTeams(tx, teamIds);
+      created += result.created;
+      skipped += result.skipped;
     }
 
     return json({ created, skipped });
