@@ -1,8 +1,9 @@
 "use client";
 
-import { Pencil, Trash2 } from "lucide-react";
+import { Copy, MoreVertical, Pencil, Repeat, Trash2 } from "lucide-react";
 import type { Transaction } from "@/types";
 import { CategoryIcon } from "@/components/ui/CategoryIcon";
+import { DropdownMenu, DropdownItem } from "@/components/ui/DropdownMenu";
 import { formatDate, formatMoney } from "@/lib/format";
 import { cn } from "@/lib/cn";
 
@@ -11,6 +12,8 @@ interface TransactionItemProps {
   currencyCode?: string;
   onEdit?: (transaction: Transaction) => void;
   onDelete?: (transaction: Transaction) => void;
+  onDuplicate?: (transaction: Transaction) => void;
+  onConvertRecurring?: (transaction: Transaction) => void;
   selectable?: boolean;
   selected?: boolean;
   onToggleSelect?: () => void;
@@ -21,12 +24,15 @@ export function TransactionItem({
   currencyCode = "USD",
   onEdit,
   onDelete,
+  onDuplicate,
+  onConvertRecurring,
   selectable,
   selected,
   onToggleSelect,
 }: TransactionItemProps) {
   const isIncome = transaction.type === "income";
   const color = transaction.category?.color ?? (isIncome ? "#ec4899" : "#3b82f6");
+  const hasActions = !!(onEdit || onDelete || onDuplicate || onConvertRecurring);
 
   return (
     <div className="group flex items-center gap-3 rounded-xl px-3 py-3 transition-colors hover:bg-muted/60">
@@ -67,26 +73,71 @@ export function TransactionItem({
           {formatMoney(transaction.amount, currencyCode)}
         </span>
 
-        {!selectable && (onEdit || onDelete) && (
-          <div className="ml-1 flex items-center gap-0.5 opacity-100 transition-opacity group-hover:opacity-100 md:opacity-0">
-            {onEdit && (
-              <button
-                onClick={() => onEdit(transaction)}
-                aria-label="Editar"
-                className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
-              >
-                <Pencil className="h-4 w-4" />
-              </button>
-            )}
-            {onDelete && (
-              <button
-                onClick={() => onDelete(transaction)}
-                aria-label="Eliminar"
-                className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-destructive"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
-            )}
+        {!selectable && hasActions && (
+          <div className="ml-1 flex items-center opacity-100 transition-opacity group-hover:opacity-100 md:opacity-0">
+            <DropdownMenu
+              trigger={(open) => (
+                <span
+                  aria-label="Acciones"
+                  className={cn(
+                    "rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
+                    open && "bg-muted text-foreground",
+                  )}
+                >
+                  <MoreVertical className="h-4 w-4" />
+                </span>
+              )}
+            >
+              {(close) => (
+                <>
+                  {onEdit && (
+                    <DropdownItem
+                      icon={<Pencil className="h-4 w-4" />}
+                      onClick={() => {
+                        close();
+                        onEdit(transaction);
+                      }}
+                    >
+                      Editar
+                    </DropdownItem>
+                  )}
+                  {onDuplicate && (
+                    <DropdownItem
+                      icon={<Copy className="h-4 w-4" />}
+                      onClick={() => {
+                        close();
+                        onDuplicate(transaction);
+                      }}
+                    >
+                      Duplicar
+                    </DropdownItem>
+                  )}
+                  {onConvertRecurring && (
+                    <DropdownItem
+                      icon={<Repeat className="h-4 w-4" />}
+                      onClick={() => {
+                        close();
+                        onConvertRecurring(transaction);
+                      }}
+                    >
+                      Convertir a recurrente
+                    </DropdownItem>
+                  )}
+                  {onDelete && (
+                    <DropdownItem
+                      danger
+                      icon={<Trash2 className="h-4 w-4" />}
+                      onClick={() => {
+                        close();
+                        onDelete(transaction);
+                      }}
+                    >
+                      Eliminar
+                    </DropdownItem>
+                  )}
+                </>
+              )}
+            </DropdownMenu>
           </div>
         )}
       </div>

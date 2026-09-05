@@ -19,6 +19,7 @@ import { downloadCsv, transactionsToCsv } from "@/lib/csv";
 import { todayString } from "@/lib/format";
 import { TransactionItem } from "./TransactionItem";
 import { TransactionForm } from "./TransactionForm";
+import { RecurringForm } from "@/components/recurring/RecurringForm";
 import { ShareModal } from "@/components/share/ShareModal";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
@@ -44,6 +45,7 @@ export function TransactionsView() {
   const [editing, setEditing] = useState<Transaction | null>(null);
   const [deleting, setDeleting] = useState<Transaction | null>(null);
   const [deletingLoading, setDeletingLoading] = useState(false);
+  const [converting, setConverting] = useState<Transaction | null>(null);
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [shareOpen, setShareOpen] = useState(false);
@@ -131,6 +133,33 @@ export function TransactionsView() {
       csv,
     );
     toast.success("CSV exportado");
+  }
+
+  async function handleDuplicate(tx: Transaction) {
+    const res = await fetch("/api/transactions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: tx.type,
+        amount: tx.amount,
+        currencyId: tx.currencyId,
+        description: tx.description,
+        date: todayString(),
+        categoryId: tx.categoryId,
+      }),
+    });
+
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      toast.error(body?.error ?? "No se pudo duplicar la transacción");
+      return;
+    }
+
+    toast.success("Transacción duplicada");
+    await mutate(
+      (key) => typeof key === "string" && key.startsWith("/api/transactions"),
+    );
+    await mutate((key) => typeof key === "string" && key.startsWith("/api/stats"));
   }
 
   return (
@@ -239,6 +268,8 @@ export function TransactionsView() {
                 currencyCode={code}
                 onEdit={selectMode ? undefined : setEditing}
                 onDelete={selectMode ? undefined : setDeleting}
+                onDuplicate={selectMode ? undefined : handleDuplicate}
+                onConvertRecurring={selectMode ? undefined : setConverting}
                 selectable={selectMode}
                 selected={selected.has(tx.id)}
                 onToggleSelect={() => toggleSelect(tx.id)}
@@ -286,6 +317,27 @@ export function TransactionsView() {
             Eliminar
           </Button>
         </div>
+      </Modal>
+
+      <Modal
+        open={!!converting}
+        onClose={() => setConverting(null)}
+        title="Convertir a recurrente"
+      >
+        {converting && (
+          <RecurringForm
+            teamId={converting.teamId ?? undefined}
+            defaults={{
+              name: converting.description || converting.category?.name || "",
+              type: converting.type,
+              amount: converting.amount,
+              currencyId: converting.currencyId,
+              categoryId: converting.categoryId,
+              startDate: todayString(),
+            }}
+            onSuccess={() => setConverting(null)}
+          />
+        )}
       </Modal>
     </div>
   );

@@ -24,28 +24,48 @@ const FREQUENCY_OPTIONS: { value: Frequency; label: string }[] = [
   { value: "yearly", label: "Anual" },
 ];
 
+interface RecurringFormDefaults {
+  name: string;
+  type: TransactionType;
+  amount: number;
+  currencyId: string;
+  categoryId: string;
+  startDate?: string;
+  payedByUserId?: string;
+}
+
 interface RecurringFormProps {
   recurring?: RecurringExpense;
+  defaults?: RecurringFormDefaults;
   teamId?: string;
   onSuccess?: () => void;
 }
 
 export function RecurringForm({
   recurring,
+  defaults,
   teamId,
   onSuccess,
 }: RecurringFormProps) {
   const { mutate } = useSWRConfig();
-  const [name, setName] = useState(recurring?.name ?? "");
-  const [type, setType] = useState<TransactionType>(recurring?.type ?? "expense");
-  const [amount, setAmount] = useState(recurring ? String(recurring.amount) : "");
-  const [currencyId, setCurrencyId] = useState(recurring?.currencyId ?? "");
-  const [categoryId, setCategoryId] = useState(recurring?.categoryId ?? "");
+  const [name, setName] = useState(defaults?.name ?? recurring?.name ?? "");
+  const [type, setType] = useState<TransactionType>(
+    defaults?.type ?? recurring?.type ?? "expense",
+  );
+  const [amount, setAmount] = useState(
+    defaults ? String(defaults.amount) : recurring ? String(recurring.amount) : "",
+  );
+  const [currencyId, setCurrencyId] = useState(
+    defaults?.currencyId ?? recurring?.currencyId ?? "",
+  );
+  const [categoryId, setCategoryId] = useState(
+    defaults?.categoryId ?? recurring?.categoryId ?? "",
+  );
   const [frequency, setFrequency] = useState<Frequency>(
     recurring?.frequency ?? "monthly",
   );
   const [startDate, setStartDate] = useState(
-    recurring?.startDate ?? todayString(),
+    defaults?.startDate ?? recurring?.startDate ?? todayString(),
   );
   const [endDate, setEndDate] = useState(recurring?.endDate ?? "");
   const [active, setActive] = useState(recurring?.active ?? true);
@@ -53,7 +73,7 @@ export function RecurringForm({
     new Set(recurring?.teamIds ?? []),
   );
   const [payedByUserId, setPayedByUserId] = useState(
-    recurring?.payedByUserId ?? "",
+    defaults?.payedByUserId ?? recurring?.payedByUserId ?? "",
   );
   const [loading, setLoading] = useState(false);
 
