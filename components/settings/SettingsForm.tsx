@@ -1,12 +1,16 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useSWRConfig } from "swr";
+import { signOut } from "next-auth/react";
 import { toast } from "sonner";
+import { AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Card } from "@/components/ui/Card";
+import { Modal } from "@/components/ui/Modal";
 import { useMe } from "@/lib/hooks/useMe";
 import { useCurrencies } from "@/lib/hooks/useCurrencies";
 import { SignOutButton } from "@/components/layout/SignOutButton";
@@ -122,6 +126,8 @@ function SettingsFormInner({
         </p>
         <SignOutButton />
       </Card>
+
+      <DeleteAccountCard />
     </div>
   );
 }
@@ -199,5 +205,87 @@ function PasswordCard() {
         Cambiar contraseña
       </Button>
     </form>
+  );
+}
+
+function DeleteAccountCard() {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function handleDelete(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+
+    const res = await fetch("/api/users/me", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password }),
+    });
+
+    if (!res.ok) {
+      setLoading(false);
+      const data = await res.json().catch(() => null);
+      toast.error(data?.error ?? "No se pudo eliminar la cuenta");
+      return;
+    }
+
+    toast.success("Cuenta eliminada. ¡Hasta pronto!");
+    await signOut({ redirect: false });
+    router.push("/login");
+    router.refresh();
+  }
+
+  return (
+    <Card className="border-destructive/40 p-6">
+      <h3 className="mb-2 flex items-center gap-2 text-base font-semibold text-card-foreground">
+        <AlertTriangle className="h-4 w-4 text-destructive" />
+        Zona de peligro
+      </h3>
+      <p className="mb-4 text-sm text-muted-foreground">
+        Eliminar tu cuenta borra de forma permanente tu perfil, tus
+        transacciones y tus categorías personales. Si eres administrador de un
+        equipo con otros miembros, la administración se transferirá a otro
+        miembro. Esta acción no se puede deshacer.
+      </p>
+      <Button
+        variant="destructive"
+        onClick={() => setOpen(true)}
+        className="self-start"
+      >
+        Eliminar mi cuenta
+      </Button>
+
+      <Modal open={open} onClose={() => setOpen(false)} title="Eliminar cuenta">
+        <form onSubmit={handleDelete} className="flex flex-col gap-4">
+          <p className="text-sm text-muted-foreground">
+            Esta acción es permanente: se borrarán tu perfil y todos tus datos.
+            Para continuar, introduce tu contraseña.
+          </p>
+          <Input
+            label="Contraseña"
+            name="password"
+            type="password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setOpen(false)}
+            >
+              Cancelar
+            </Button>
+            <Button type="submit" variant="destructive" loading={loading}>
+              Eliminar mi cuenta
+            </Button>
+          </div>
+        </form>
+      </Modal>
+    </Card>
   );
 }
