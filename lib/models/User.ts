@@ -14,7 +14,10 @@ export class User extends Model<
   declare id: CreationOptional<string>;
   declare name: string;
   declare email: string;
-  declare passwordHash: string;
+  declare passwordHash: CreationOptional<string | null>;
+  declare provider: CreationOptional<"credentials" | "google">;
+  declare providerId: CreationOptional<string | null>;
+  declare image: CreationOptional<string | null>;
   declare defaultCurrencyId: CreationOptional<string | null>;
   declare createdAt: CreationOptional<Date>;
   declare updatedAt: CreationOptional<Date>;
@@ -38,7 +41,21 @@ User.init(
     },
     passwordHash: {
       type: DataTypes.STRING,
+      allowNull: true,
+    },
+    provider: {
+      type: DataTypes.ENUM("credentials", "google"),
       allowNull: false,
+      defaultValue: "credentials",
+    },
+    providerId: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      unique: true,
+    },
+    image: {
+      type: DataTypes.STRING,
+      allowNull: true,
     },
     defaultCurrencyId: {
       type: DataTypes.UUID,

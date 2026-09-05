@@ -27,6 +27,9 @@ export async function GET() {
       id: user.id,
       name: user.name,
       email: user.email,
+      image: user.image,
+      provider: user.provider,
+      hasPassword: !!user.passwordHash,
       defaultCurrencyId: user.defaultCurrencyId,
     });
   } catch (err) {
@@ -62,6 +65,9 @@ export async function PUT(req: NextRequest) {
       id: user?.id,
       name: user?.name,
       email: user?.email,
+      image: user?.image,
+      provider: user?.provider,
+      hasPassword: !!user?.passwordHash,
       defaultCurrencyId: user?.defaultCurrencyId,
     });
   } catch (err) {

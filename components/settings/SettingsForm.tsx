@@ -110,12 +110,14 @@ function SettingsFormInner({
         </form>
       </Card>
 
-      <Card className="p-6">
-        <h3 className="mb-4 text-base font-semibold text-card-foreground">
-          Contraseña
-        </h3>
-        <PasswordCard />
-      </Card>
+      {me.hasPassword && (
+        <Card className="p-6">
+          <h3 className="mb-4 text-base font-semibold text-card-foreground">
+            Contraseña
+          </h3>
+          <PasswordCard />
+        </Card>
+      )}
 
       <Card className="p-6">
         <h3 className="mb-2 text-base font-semibold text-card-foreground">
@@ -127,7 +129,7 @@ function SettingsFormInner({
         <SignOutButton />
       </Card>
 
-      <DeleteAccountCard />
+      <DeleteAccountCard hasPassword={me.hasPassword} />
     </div>
   );
 }
@@ -208,7 +210,7 @@ function PasswordCard() {
   );
 }
 
-function DeleteAccountCard() {
+function DeleteAccountCard({ hasPassword }: { hasPassword: boolean }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [password, setPassword] = useState("");
@@ -261,17 +263,19 @@ function DeleteAccountCard() {
         <form onSubmit={handleDelete} className="flex flex-col gap-4">
           <p className="text-sm text-muted-foreground">
             Esta acción es permanente: se borrarán tu perfil y todos tus datos.
-            Para continuar, introduce tu contraseña.
+            Para continuar, {hasPassword ? "introduce tu contraseña" : "confirma la eliminación"}.
           </p>
-          <Input
-            label="Contraseña"
-            name="password"
-            type="password"
-            autoComplete="current-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
+          {hasPassword && (
+            <Input
+              label="Contraseña"
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          )}
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <Button
               type="button"

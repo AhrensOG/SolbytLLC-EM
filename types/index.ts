@@ -4,6 +4,9 @@ export interface PublicUser {
   id: string;
   name: string;
   email: string;
+  image: string | null;
+  provider: "credentials" | "google";
+  hasPassword: boolean;
   defaultCurrencyId: string | null;
   createdAt: string;
 }

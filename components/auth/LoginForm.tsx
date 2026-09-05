@@ -6,6 +6,7 @@ import { signIn } from "next-auth/react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
 
 export function LoginForm() {
   const router = useRouter();
@@ -60,6 +61,7 @@ export function LoginForm() {
       <Button type="submit" loading={loading} className="w-full">
         Iniciar sesión
       </Button>
+      <GoogleSignInButton />
     </form>
   );
 }
