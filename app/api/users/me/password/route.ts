@@ -19,6 +19,10 @@ export async function PATCH(req: NextRequest) {
 
     const { currentPassword, newPassword } = parsed.data;
 
+    if (!user.passwordHash) {
+      return error("Esta cuenta no tiene contraseña configurada", 422);
+    }
+
     const isValid = await bcrypt.compare(currentPassword, user.passwordHash);
     if (!isValid) {
       return error("La contraseña actual no es correcta", 422);
