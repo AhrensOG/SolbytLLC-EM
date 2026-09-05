@@ -99,7 +99,7 @@ export function TeamCategoriesView({ teamId }: { teamId: string }) {
           <EmptyState
             icon={Tag}
             title="No hay categorías en el equipo"
-            description="Crea categorías compartidas para organizar los movimientos del equipo."
+            description="Crea categorías compartidas para organizar las transacciones del equipo."
             action={
               <Button size="sm" onClick={() => setCreating(true)}>
                 <Plus className="h-4 w-4" /> Crear categoría

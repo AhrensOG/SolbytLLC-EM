@@ -29,7 +29,7 @@ export function TeamTabs({ teamId }: TeamTabsProps) {
 
   const tabs: Tab[] = [
     { href: `/teams/${teamId}`, label: "Resumen", icon: BarChart3 },
-    { href: `/teams/${teamId}/transactions`, label: "Movimientos", icon: ArrowLeftRight },
+    { href: `/teams/${teamId}/transactions`, label: "Transacciones", icon: ArrowLeftRight },
     { href: `/teams/${teamId}/categories`, label: "Categorías", icon: Tag },
     { href: `/teams/${teamId}/members`, label: "Miembros", icon: Users },
     { href: `/teams/${teamId}/goal`, label: "Meta", icon: Target },

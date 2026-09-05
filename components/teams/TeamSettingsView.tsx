@@ -85,7 +85,7 @@ export function TeamSettingsView({ teamId }: { teamId: string }) {
           Zona de peligro
         </h3>
         <p className="mb-4 text-sm text-muted-foreground">
-          Eliminar el equipo borrará todos sus movimientos, categorías y
+          Eliminar el equipo borrará todas sus transacciones, categorías y
           miembros. Esta acción no se puede deshacer.
         </p>
         <Button variant="destructive" onClick={() => setConfirmDelete(true)}>

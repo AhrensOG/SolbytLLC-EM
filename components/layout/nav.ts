@@ -20,7 +20,7 @@ export const NAV_ITEMS: NavItem[] = [
   {
     href: "/transactions",
     label: "Transacciones",
-    labelShort: "Movimientos",
+    labelShort: "Transacciones",
     icon: ArrowLeftRight,
   },
   { href: "/categories", label: "Categorías", icon: Tag },

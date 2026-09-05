@@ -152,8 +152,8 @@ export function TeamDashboardView({ teamId }: { teamId: string }) {
           {members.length === 0 ? (
             <EmptyState
               icon={Wallet}
-              title="Sin movimientos este mes"
-              description="Cuando los miembros registren movimientos, verás el control aquí."
+              title="Sin transacciones este mes"
+              description="Cuando los miembros registren transacciones, verás el control aquí."
             />
           ) : (
             <ul className="flex flex-col gap-3">

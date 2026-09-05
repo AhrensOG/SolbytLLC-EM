@@ -11,11 +11,11 @@ export default async function TeamRecurringPage({
     <div className="flex flex-col gap-4">
       <header>
         <h2 className="text-xl font-bold text-foreground">
-          Recurrentes del equipo
+          Transacciones recurrentes del equipo
         </h2>
         <p className="text-sm text-muted-foreground">
-          Pagos e ingresos periódicos del equipo, gestionados por cualquier
-          miembro. Cada uno tiene un pagador designado.
+          Transacciones periódicas del equipo, gestionadas por cualquier
+          miembro. Cada una tiene un pagador designado.
         </p>
       </header>
 
