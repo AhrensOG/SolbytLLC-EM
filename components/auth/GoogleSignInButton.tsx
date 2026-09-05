@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/Button";
@@ -30,22 +29,16 @@ function GoogleIcon({ className }: { className?: string }) {
 }
 
 export function GoogleSignInButton() {
-  const router = useRouter();
   const [loading, setLoading] = useState(false);
 
   async function handleGoogle() {
     setLoading(true);
-    const res = await signIn("google", { redirect: false });
-    setLoading(false);
-
-    if (res?.error) {
+    try {
+      await signIn("google", { redirectTo: "/dashboard" });
+    } catch {
+      setLoading(false);
       toast.error("No se pudo iniciar sesión con Google");
-      return;
     }
-
-    toast.success("Bienvenido de vuelta");
-    router.push("/dashboard");
-    router.refresh();
   }
 
   return (
