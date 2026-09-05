@@ -1,7 +1,5 @@
-import Link from "next/link";
-import { Plus } from "lucide-react";
 import { TransactionsView } from "@/components/transactions/TransactionsView";
-import { Button } from "@/components/ui/Button";
+import { NewTransactionButton } from "@/components/transactions/NewTransactionButton";
 
 export default function TransactionsPage() {
   return (
@@ -13,13 +11,7 @@ export default function TransactionsPage() {
             Gestiona tus ingresos y gastos.
           </p>
         </div>
-        <Link href="/transactions/new">
-          <Button>
-            <Plus className="h-4 w-4" />
-            <span className="hidden sm:inline">Nueva transacción</span>
-            <span className="sm:hidden">Nueva</span>
-          </Button>
-        </Link>
+        <NewTransactionButton />
       </header>
 
       <TransactionsView />

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useSWRConfig } from "swr";
 import { toast } from "sonner";
 import { ArrowLeftRight, Download, Plus } from "lucide-react";
@@ -36,6 +35,7 @@ export function TeamTransactionsView({ teamId }: { teamId: string }) {
   const [month, setMonth] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [editing, setEditing] = useState<Transaction | null>(null);
+  const [creating, setCreating] = useState(false);
   const [deleting, setDeleting] = useState<Transaction | null>(null);
   const [deletingLoading, setDeletingLoading] = useState(false);
   const [converting, setConverting] = useState<Transaction | null>(null);
@@ -86,17 +86,17 @@ export function TeamTransactionsView({ teamId }: { teamId: string }) {
 
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      toast.error(body?.error ?? "No se pudo duplicar el movimiento");
+      toast.error(body?.error ?? "No se pudo duplicar la transacción");
       return;
     }
 
-    toast.success("Movimiento duplicado");
+    toast.success("Transacción duplicada");
     await mutate((key) => typeof key === "string" && key.startsWith(`/api/teams/${teamId}`));
   }
 
   function handleExport() {
     if (!transactions || transactions.length === 0) {
-      toast.info("No hay movimientos para exportar");
+      toast.info("No hay transacciones para exportar");
       return;
     }
     const csv = transactionsToCsv(
@@ -105,7 +105,7 @@ export function TeamTransactionsView({ teamId }: { teamId: string }) {
       currency?.exchangeRateToBase ?? 1,
     );
     downloadCsv(
-      `equipo-movimientos-${todayString()}.csv`,
+      `equipo-transacciones-${todayString()}.csv`,
       csv,
     );
     toast.success("CSV exportado");
@@ -165,14 +165,12 @@ export function TeamTransactionsView({ teamId }: { teamId: string }) {
         <Card>
           <EmptyState
             icon={ArrowLeftRight}
-            title="No hay movimientos en el equipo"
+            title="No hay transacciones en el equipo"
             description="Agrega el primer ingreso o gasto compartido."
             action={
-              <Link href={`/teams/${teamId}/transactions/new`}>
-                <Button size="sm">
-                  <Plus className="h-4 w-4" /> Nuevo movimiento
-                </Button>
-              </Link>
+              <Button size="sm" onClick={() => setCreating(true)}>
+                <Plus className="h-4 w-4" /> Nueva transacción
+              </Button>
             }
           />
         </Card>
@@ -199,7 +197,7 @@ export function TeamTransactionsView({ teamId }: { teamId: string }) {
       <Modal
         open={!!editing}
         onClose={() => setEditing(null)}
-        title="Editar movimiento"
+        title="Editar transacción"
       >
         {editing && (
           <TransactionForm
@@ -211,12 +209,20 @@ export function TeamTransactionsView({ teamId }: { teamId: string }) {
       </Modal>
 
       <Modal
+        open={creating}
+        onClose={() => setCreating(false)}
+        title="Nueva transacción"
+      >
+        <TransactionForm teamId={teamId} onSuccess={() => setCreating(false)} />
+      </Modal>
+
+      <Modal
         open={!!deleting}
         onClose={() => setDeleting(null)}
-        title="Eliminar movimiento"
+        title="Eliminar transacción"
       >
         <p className="text-sm text-muted-foreground">
-          ¿Seguro que quieres eliminar este movimiento? Esta acción no se puede
+          ¿Seguro que quieres eliminar esta transacción? Esta acción no se puede
           deshacer.
         </p>
         <div className="mt-6 flex justify-end gap-2">

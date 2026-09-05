@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useSWRConfig } from "swr";
 import { toast } from "sonner";
 import {
@@ -15,6 +14,7 @@ import {
 import { useTransactions } from "@/lib/hooks/useTransactions";
 import { useCategories } from "@/lib/hooks/useCategories";
 import { useDefaultCurrency } from "@/lib/hooks/useDefaultCurrency";
+import { useTransactionTeams } from "@/lib/hooks/useTransactionTeams";
 import { downloadCsv, transactionsToCsv } from "@/lib/csv";
 import { todayString } from "@/lib/format";
 import { TransactionItem } from "./TransactionItem";
@@ -43,6 +43,7 @@ export function TransactionsView() {
   const [month, setMonth] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [editing, setEditing] = useState<Transaction | null>(null);
+  const [creating, setCreating] = useState(false);
   const [deleting, setDeleting] = useState<Transaction | null>(null);
   const [deletingLoading, setDeletingLoading] = useState(false);
   const [converting, setConverting] = useState<Transaction | null>(null);
@@ -55,6 +56,10 @@ export function TransactionsView() {
     month: month || undefined,
     categoryId: categoryId || undefined,
   });
+  const {
+    data: editingTeams,
+    mutate: mutateEditingTeams,
+  } = useTransactionTeams(editing?.id ?? null);
   const { data: categories } = useCategories();
   const currency = useDefaultCurrency();
   const code = currency?.code ?? "USD";
@@ -133,6 +138,43 @@ export function TransactionsView() {
       csv,
     );
     toast.success("CSV exportado");
+  }
+
+  async function handleRemoveFromTeam(teamId: string) {
+    if (!editing) return;
+    const res = await fetch(`/api/transactions/${editing.id}/teams/${teamId}`, {
+      method: "DELETE",
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      toast.error(body?.error ?? "No se pudo quitar del equipo");
+      return;
+    }
+    await mutateEditingTeams();
+    await mutate((key) => typeof key === "string" && key.startsWith("/api/teams"));
+    toast.success("Transacción quitada del equipo");
+  }
+
+  async function handleAddTeam(teamIds: string[]) {
+    if (!editing) return;
+    const res = await fetch("/api/share/transactions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ transactionIds: [editing.id], teamIds }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      toast.error(body?.error ?? "No se pudo compartir la transacción");
+      return;
+    }
+    const result: ShareResult = await res.json();
+    await mutateEditingTeams();
+    await mutate((key) => typeof key === "string" && key.startsWith("/api/teams"));
+    toast.success(
+      result.created > 0
+        ? `Copiada a ${result.created} equipo${result.created === 1 ? "" : "s"}`
+        : "Ya estaba en esos equipos",
+    );
   }
 
   async function handleDuplicate(tx: Transaction) {
@@ -250,11 +292,9 @@ export function TransactionsView() {
             title="No hay transacciones"
             description="Agrega tu primer ingreso o gasto para empezar a llevar el control."
             action={
-              <Link href="/transactions/new">
-                <Button size="sm">
-                  <Plus className="h-4 w-4" /> Nueva transacción
-                </Button>
-              </Link>
+              <Button size="sm" onClick={() => setCreating(true)}>
+                <Plus className="h-4 w-4" /> Nueva transacción
+              </Button>
             }
           />
         </Card>
@@ -296,8 +336,19 @@ export function TransactionsView() {
           <TransactionForm
             transaction={editing}
             onSuccess={() => setEditing(null)}
+            sharedTeams={editingTeams ?? []}
+            onRemoveFromTeam={(shared) => handleRemoveFromTeam(shared.teamId)}
+            onAddTeam={handleAddTeam}
           />
         )}
+      </Modal>
+
+      <Modal
+        open={creating}
+        onClose={() => setCreating(false)}
+        title="Nueva transacción"
+      >
+        <TransactionForm onSuccess={() => setCreating(false)} />
       </Modal>
 
       <Modal

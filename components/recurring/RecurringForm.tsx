@@ -11,8 +11,9 @@ import { useCategories } from "@/lib/hooks/useCategories";
 import { useTeamCategories } from "@/lib/hooks/useTeamCategories";
 import { useTeamMembers } from "@/lib/hooks/useTeamMembers";
 import { useCurrencies } from "@/lib/hooks/useCurrencies";
-import { useTeams } from "@/lib/hooks/useTeams";
+import { useDefaultCurrency } from "@/lib/hooks/useDefaultCurrency";
 import { useMe } from "@/lib/hooks/useMe";
+import { TeamPicker } from "@/components/teams/TeamPicker";
 import { todayString } from "@/lib/format";
 import type { Frequency, RecurringExpense, TransactionType } from "@/types";
 import { cn } from "@/lib/cn";
@@ -78,25 +79,18 @@ export function RecurringForm({
   const [loading, setLoading] = useState(false);
 
   const { data: currencies } = useCurrencies();
+  const defaultCurrency = useDefaultCurrency();
   const { data: me } = useMe();
   const personalCategories = useCategories({ type });
   const teamCategories = useTeamCategories(teamId ?? "", { type });
   const { data: members } = useTeamMembers(teamId ?? "");
-  const { data: teams } = useTeams();
 
   const categories = teamId
     ? (teamCategories.data ?? [])
     : (personalCategories.data ?? []);
   const filteredCategories = categories.filter((c) => c.type === type);
-
-  function toggleTeam(teamIdValue: string) {
-    setTeamIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(teamIdValue)) next.delete(teamIdValue);
-      else next.add(teamIdValue);
-      return next;
-    });
-  }
+  const effectiveCurrencyId =
+    currencyId || defaultCurrency?.id || currencies?.[0]?.id || "";
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -107,7 +101,7 @@ export function RecurringForm({
           name,
           type,
           amount: Number(amount),
-          currencyId,
+          currencyId: effectiveCurrencyId,
           categoryId,
           frequency,
           startDate,
@@ -120,7 +114,7 @@ export function RecurringForm({
           name,
           type,
           amount: Number(amount),
-          currencyId,
+          currencyId: effectiveCurrencyId,
           categoryId,
           frequency,
           startDate,
@@ -205,7 +199,7 @@ export function RecurringForm({
         />
         <Select
           label="Moneda"
-          value={currencyId}
+          value={effectiveCurrencyId}
           onChange={(e) => setCurrencyId(e.target.value)}
           required
         >
@@ -273,37 +267,12 @@ export function RecurringForm({
           ))}
         </Select>
       ) : (
-        <div className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium text-foreground">
-            Compartir a equipos
-          </span>
-          {!teams || teams.length === 0 ? (
-            <p className="text-xs text-muted-foreground">
-              No tienes equipos. Solo se generará en tu área personal.
-            </p>
-          ) : (
-            <div className="flex flex-wrap gap-2">
-              {teams.map((team) => {
-                const checked = teamIds.has(team.id);
-                return (
-                  <button
-                    key={team.id}
-                    type="button"
-                    onClick={() => toggleTeam(team.id)}
-                    className={cn(
-                      "rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
-                      checked
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : "border-border text-muted-foreground hover:bg-muted",
-                    )}
-                  >
-                    {team.name}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
+        <TeamPicker
+          selected={teamIds}
+          onChange={setTeamIds}
+          label="Compartir a equipos"
+          hint="Si no seleccionas ningún equipo, la transacción solo se generará en tu área personal."
+        />
       )}
 
       {recurring && (

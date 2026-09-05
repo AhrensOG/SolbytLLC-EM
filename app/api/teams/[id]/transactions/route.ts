@@ -5,6 +5,7 @@ import { Category, Currency, Transaction } from "@/lib/models";
 import { serializeTransaction } from "@/lib/serialize";
 import { transactionSchema } from "@/lib/validation";
 import { computeConvertedAmount } from "@/lib/conversion";
+import { resolvePersonalCategory } from "@/lib/personal-category";
 import { handleApiError, json } from "@/lib/api";
 
 type Params = { params: Promise<{ id: string }> };
@@ -66,6 +67,8 @@ export async function POST(req: NextRequest, { params }: Params) {
     }
 
     const { type, amount, currencyId, description, date, categoryId } = parsed.data;
+    const copyToPersonal =
+      typeof body?.copyToPersonal === "boolean" ? body.copyToPersonal : false;
 
     const convertedAmount = await computeConvertedAmount(amount, currencyId);
 
@@ -80,6 +83,25 @@ export async function POST(req: NextRequest, { params }: Params) {
       userId,
       teamId: id,
     });
+
+    if (copyToPersonal) {
+      const personalCategoryId = await resolvePersonalCategory(userId, categoryId);
+      if (personalCategoryId) {
+        const personalConvertedAmount = await computeConvertedAmount(amount, currencyId);
+        await Transaction.create({
+          type,
+          amount,
+          convertedAmount: personalConvertedAmount,
+          currencyId,
+          description,
+          date,
+          categoryId: personalCategoryId,
+          userId,
+          teamId: null,
+          importKey: `imp:${transaction.id}:personal`,
+        });
+      }
+    }
 
     const full = await Transaction.findByPk(transaction.id, {
       include: [

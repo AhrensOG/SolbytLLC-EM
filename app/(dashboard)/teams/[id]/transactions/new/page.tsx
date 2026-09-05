@@ -11,7 +11,7 @@ export default async function NewTeamTransactionPage({
   return (
     <div className="mx-auto flex w-full max-w-lg flex-col gap-6">
       <header>
-        <h2 className="text-xl font-bold text-foreground">Nuevo movimiento</h2>
+        <h2 className="text-xl font-bold text-foreground">Nueva transacción</h2>
         <p className="text-sm text-muted-foreground">
           Registra un ingreso o gasto en este equipo.
         </p>

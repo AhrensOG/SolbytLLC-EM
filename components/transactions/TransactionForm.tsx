@@ -4,16 +4,17 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSWRConfig } from "swr";
 import { toast } from "sonner";
-import { ArrowDownRight, ArrowUpRight, Users } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, Plus } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
+import { TeamPicker } from "@/components/teams/TeamPicker";
 import { useCategories } from "@/lib/hooks/useCategories";
 import { useTeamCategories } from "@/lib/hooks/useTeamCategories";
 import { useCurrencies } from "@/lib/hooks/useCurrencies";
 import { useDefaultCurrency } from "@/lib/hooks/useDefaultCurrency";
-import { useTeams } from "@/lib/hooks/useTeams";
 import type { ShareResult, Transaction, TransactionType } from "@/types";
+import type { SharedTeam } from "@/lib/hooks/useTransactionTeams";
 import { todayString } from "@/lib/format";
 import { cn } from "@/lib/cn";
 
@@ -21,9 +22,19 @@ interface TransactionFormProps {
   transaction?: Transaction;
   teamId?: string;
   onSuccess?: () => void;
+  sharedTeams?: SharedTeam[];
+  onRemoveFromTeam?: (shared: SharedTeam) => void;
+  onAddTeam?: (teamIds: string[]) => Promise<void> | void;
 }
 
-export function TransactionForm({ transaction, teamId, onSuccess }: TransactionFormProps) {
+export function TransactionForm({
+  transaction,
+  teamId,
+  onSuccess,
+  sharedTeams,
+  onRemoveFromTeam,
+  onAddTeam,
+}: TransactionFormProps) {
   const router = useRouter();
   const { mutate } = useSWRConfig();
 
@@ -32,32 +43,25 @@ export function TransactionForm({ transaction, teamId, onSuccess }: TransactionF
   const [currencyId, setCurrencyId] = useState(transaction?.currencyId ?? "");
   const [categoryId, setCategoryId] = useState(transaction?.categoryId ?? "");
   const [description, setDescription] = useState(transaction?.description ?? "");
-  const [date, setDate] = useState(
-    transaction?.date ?? todayString(),
-  );
+  const [date, setDate] = useState(transaction?.date ?? todayString());
   const [selectedTeams, setSelectedTeams] = useState<Set<string>>(new Set());
+  const [copyToPersonal, setCopyToPersonal] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
+  const [addSelected, setAddSelected] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
 
   const { data: currencies } = useCurrencies();
   const defaultCurrency = useDefaultCurrency();
   const personalCategories = useCategories({ type });
   const teamCategories = useTeamCategories(teamId ?? "", { type });
-  const { data: teams } = useTeams();
 
   const categories = teamId
     ? teamCategories.data ?? []
     : personalCategories.data ?? [];
 
   const isPersonalCreate = !teamId && !transaction;
-
-  function toggleTeam(id: string) {
-    setSelectedTeams((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
+  const effectiveCurrency =
+    currencyId || defaultCurrency?.id || currencies?.[0]?.id || "";
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -66,11 +70,12 @@ export function TransactionForm({ transaction, teamId, onSuccess }: TransactionF
     const payload = {
       type,
       amount: Number(amount),
-      currencyId: currencyId || defaultCurrency?.id || currencies?.[0]?.id || "",
+      currencyId: effectiveCurrency,
       categoryId,
       description,
       date,
       ...(isPersonalCreate ? { shareTeamIds: [...selectedTeams] } : {}),
+      ...(teamId && !transaction ? { copyToPersonal } : {}),
     };
 
     const base = teamId ? `/api/teams/${teamId}/transactions` : "/api/transactions";
@@ -102,7 +107,11 @@ export function TransactionForm({ transaction, teamId, onSuccess }: TransactionF
           (teamId ? key.startsWith(`/api/teams/${teamId}`) : false)),
     );
 
-    let message = transaction ? "Transacción actualizada" : "Transacción agregada";
+    let message = transaction
+      ? "Transacción actualizada"
+      : teamId
+        ? "Transacción agregada al equipo"
+        : "Transacción agregada";
     if (!transaction && !teamId && selectedTeams.size > 0) {
       const result = (await res.json().catch(() => null)) as
         | (ShareResult & { transaction?: Transaction })
@@ -124,6 +133,13 @@ export function TransactionForm({ transaction, teamId, onSuccess }: TransactionF
     } else {
       router.push(teamId ? `/teams/${teamId}/transactions` : "/transactions");
     }
+  }
+
+  async function handleShareToTeam() {
+    if (addSelected.size === 0 || !onAddTeam) return;
+    await onAddTeam([...addSelected]);
+    setAddSelected(new Set());
+    setAddOpen(false);
   }
 
   return (
@@ -202,7 +218,7 @@ export function TransactionForm({ transaction, teamId, onSuccess }: TransactionF
         <Select
           label="Moneda"
           name="currencyId"
-          value={currencyId}
+          value={effectiveCurrency}
           onChange={(e) => setCurrencyId(e.target.value)}
           required
         >
@@ -214,50 +230,98 @@ export function TransactionForm({ transaction, teamId, onSuccess }: TransactionF
         </Select>
       </div>
 
-      {isPersonalCreate && teams && teams.length > 0 && (
+      {isPersonalCreate && (
+        <TeamPicker
+          selected={selectedTeams}
+          onChange={setSelectedTeams}
+          label="Compartir al crear a equipos"
+          hint="La transacción se guardará en tu área personal y se copiará a los equipos seleccionados."
+        />
+      )}
+
+      {transaction && !teamId && (sharedTeams ?? []).length > 0 && (
         <div className="flex flex-col gap-2">
-          <span className="flex items-center gap-2 text-sm font-medium text-foreground">
-            <Users className="h-4 w-4 text-muted-foreground" />
-            Compartir al crear a equipos
+          <span className="text-sm font-medium text-foreground">
+            Equipos donde está esta transacción
           </span>
-          <p className="text-xs text-muted-foreground">
-            La transacción se guardará en tu área personal y se copiará a los
-            equipos seleccionados.
-          </p>
-          <ul className="flex flex-col gap-2">
-            {teams.map((team) => {
-              const checked = selectedTeams.has(team.id);
-              return (
-                <li key={team.id}>
+          <ul className="flex flex-col gap-1.5">
+            {(sharedTeams ?? []).map((shared) => (
+              <li
+                key={shared.teamId}
+                className="flex items-center justify-between gap-2 rounded-lg border border-border px-3 py-2"
+              >
+                <span className="truncate text-sm font-medium text-card-foreground">
+                  {shared.teamName}
+                </span>
+                {onRemoveFromTeam && (
                   <button
                     type="button"
-                    onClick={() => toggleTeam(team.id)}
-                    className={cn(
-                      "flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-colors",
-                      checked
-                        ? "border-primary bg-primary/10"
-                        : "border-border hover:bg-muted/50",
-                    )}
+                    onClick={() => onRemoveFromTeam(shared)}
+                    className="text-xs font-medium text-destructive transition-colors hover:bg-destructive/10 rounded-md px-2 py-1"
                   >
-                    <span className="flex-1 truncate text-sm font-medium text-card-foreground">
-                      {team.name}
-                    </span>
-                    <span
-                      className={cn(
-                        "flex h-5 w-5 shrink-0 items-center justify-center rounded-md border text-xs",
-                        checked
-                          ? "border-primary bg-primary text-primary-foreground"
-                          : "border-border",
-                      )}
-                    >
-                      {checked ? "✓" : ""}
-                    </span>
+                    Quitar del equipo
                   </button>
-                </li>
-              );
-            })}
+                )}
+              </li>
+            ))}
           </ul>
         </div>
+      )}
+
+      {transaction && !teamId && !addOpen && onAddTeam && (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => setAddOpen(true)}
+          className="self-start"
+        >
+          <Plus className="h-4 w-4" /> Compartir a otro equipo
+        </Button>
+      )}
+
+      {transaction && !teamId && addOpen && (
+        <div className="flex flex-col gap-2 rounded-xl border border-border bg-card p-3">
+          <TeamPicker
+            selected={addSelected}
+            onChange={setAddSelected}
+            label="Equipos"
+            hint="Selecciona los equipos a los que copiar esta transacción."
+          />
+          <div className="flex justify-end gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setAddSelected(new Set());
+                setAddOpen(false);
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              disabled={addSelected.size === 0}
+              onClick={handleShareToTeam}
+            >
+              Compartir
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {teamId && !transaction && (
+        <label className="flex items-center gap-2 text-sm text-card-foreground">
+          <input
+            type="checkbox"
+            checked={copyToPersonal}
+            onChange={(e) => setCopyToPersonal(e.target.checked)}
+            className="h-4 w-4 accent-[var(--primary)]"
+          />
+          Crear también en mi área personal
+        </label>
       )}
 
       <Button type="submit" loading={loading} className="w-full">
