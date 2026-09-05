@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Wallet, Mail } from "lucide-react";
+import { BackButton } from "@/components/BackButton";
 
 export default function PublicLayout({
   children,
@@ -10,6 +11,7 @@ export default function PublicLayout({
     <div className="flex min-h-screen flex-col bg-background text-foreground">
       <header className="border-b border-border bg-card/60 backdrop-blur">
         <div className="mx-auto flex w-full max-w-3xl items-center gap-3 px-4 py-4">
+          <BackButton />
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground">
             <Wallet className="h-4 w-4" />
           </div>
