@@ -1,13 +1,29 @@
-import { syncDatabase, Currency } from "../lib/models";
+import { syncDatabase, Currency, Transaction, User } from "../lib/models";
 import { sequelize } from "../lib/db";
 import { QueryTypes } from "sequelize";
 
 const currencies = [
   { code: "USD", name: "US Dollar", symbol: "$", exchangeRateToBase: 1 },
   { code: "EUR", name: "Euro", symbol: "€", exchangeRateToBase: 1.09 },
-  { code: "CLP", name: "Peso Chileno", symbol: "$", exchangeRateToBase: 0.001052 },
   { code: "ARS", name: "Peso Argentino", symbol: "$", exchangeRateToBase: 0.00085 },
 ];
+
+async function cleanupLegacyCurrencies() {
+  const clp = await Currency.findOne({ where: { code: "CLP" } });
+  if (!clp) return;
+
+  const txCount = await Transaction.count({ where: { currencyId: clp.id } });
+  const userCount = await User.count({ where: { defaultCurrencyId: clp.id } });
+
+  if (txCount === 0 && userCount === 0) {
+    await clp.destroy();
+    console.log("Currency CLP removed (unused).");
+  } else {
+    console.log(
+      `CLP in use (${txCount} transactions, ${userCount} users default). Kept to avoid breaking references.`,
+    );
+  }
+}
 
 async function backfillConvertedAmounts() {
   await sequelize.query(
@@ -30,6 +46,8 @@ async function main() {
   console.log("Syncing database schema...");
   await syncDatabase({ alter: true });
   console.log("Schema ready.");
+
+  await cleanupLegacyCurrencies();
 
   for (const c of currencies) {
     const [currency] = await Currency.findOrCreate({
