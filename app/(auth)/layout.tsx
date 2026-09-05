@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Wallet } from "lucide-react";
 
 export default function AuthLayout({
@@ -20,6 +21,19 @@ export default function AuthLayout({
       </div>
       <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 shadow-xl">
         {children}
+      </div>
+      <div className="mt-6 flex items-center gap-4 text-xs text-muted-foreground">
+        <Link href="/privacy" className="transition-colors hover:text-foreground">
+          Privacidad
+        </Link>
+        <span className="text-border">•</span>
+        <Link href="/terms" className="transition-colors hover:text-foreground">
+          Términos
+        </Link>
+        <span className="text-border">•</span>
+        <Link href="/cookies" className="transition-colors hover:text-foreground">
+          Cookies
+        </Link>
       </div>
     </div>
   );
