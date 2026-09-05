@@ -1,5 +1,3 @@
-import { redirect } from "next/navigation";
-import { getTeamForUser } from "@/lib/team-data";
 import { RecurringView } from "@/components/recurring/RecurringView";
 
 export default async function TeamRecurringPage({
@@ -8,8 +6,6 @@ export default async function TeamRecurringPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const result = await getTeamForUser(id);
-  if (!result) redirect("/teams");
 
   return (
     <div className="flex flex-col gap-4">

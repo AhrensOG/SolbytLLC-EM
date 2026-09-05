@@ -1,8 +1,4 @@
-import { redirect } from "next/navigation";
-import { getTeamForUser } from "@/lib/team-data";
-import { InviteForm } from "@/components/teams/InviteForm";
-import { MemberList } from "@/components/teams/MemberList";
-import { Card } from "@/components/ui/Card";
+import { MembersView } from "@/components/teams/MembersView";
 
 export default async function TeamMembersPage({
   params,
@@ -10,8 +6,6 @@ export default async function TeamMembersPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const result = await getTeamForUser(id);
-  if (!result) redirect("/teams");
 
   return (
     <div className="flex flex-col gap-4">
@@ -22,11 +16,7 @@ export default async function TeamMembersPage({
         </p>
       </header>
 
-      <Card className="p-4">
-        <InviteForm teamId={id} />
-      </Card>
-
-      <MemberList teamId={id} isAdmin={result.role === "admin"} />
+      <MembersView teamId={id} />
     </div>
   );
 }

@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { Pencil, Target, Users } from "lucide-react";
 import { useTeamGoal } from "@/lib/hooks/useTeamGoal";
 import { useMe } from "@/lib/hooks/useMe";
+import { useTeam } from "@/lib/hooks/useTeam";
 import { formatMoney } from "@/lib/format";
 import { GoalForm, MemberGoalForm } from "./GoalForm";
 import { Modal } from "@/components/ui/Modal";
@@ -12,7 +13,6 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Skeleton, ListSkeleton } from "@/components/ui/Skeleton";
-import type { Team } from "@/types";
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
@@ -43,12 +43,11 @@ function ProgressBar({
 
 interface GoalViewProps {
   teamId: string;
-  team: Team;
-  isAdmin: boolean;
 }
 
-export function GoalView({ teamId, team, isAdmin }: GoalViewProps) {
+export function GoalView({ teamId }: GoalViewProps) {
   const { data: goal, isLoading } = useTeamGoal(teamId);
+  const { data: team, isLoading: teamLoading } = useTeam(teamId);
   const { data: me } = useMe();
   const [editingGroup, setEditingGroup] = useState(false);
   const [editingMember, setEditingMember] = useState<{
@@ -56,6 +55,20 @@ export function GoalView({ teamId, team, isAdmin }: GoalViewProps) {
     name: string;
     goalAmount: number | null;
   } | null>(null);
+
+  if (teamLoading || !team)
+    return (
+      <div className="flex flex-col gap-4">
+        <Card className="space-y-4 p-5">
+          <Skeleton className="h-5 w-40" />
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-2.5 w-full rounded-full" />
+        </Card>
+        <ListSkeleton rows={3} />
+      </div>
+    );
+
+  const isAdmin = team.role === "admin";
 
   if (isLoading)
     return (
