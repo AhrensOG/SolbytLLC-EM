@@ -7,7 +7,9 @@ import {
   requireUserId,
 } from "@/lib/auth-helpers";
 import {
+  BankConnection,
   Category,
+  ImportDraft,
   Invitation,
   RecurringExpense,
   RecurringExpenseTeam,
@@ -150,6 +152,10 @@ export async function DELETE(req: NextRequest) {
         { payedByUserId: null },
         { where: { payedByUserId: userId }, transaction: t },
       );
+
+      // 7b. Bank connection and import drafts.
+      await ImportDraft.destroy({ where: { userId }, transaction: t });
+      await BankConnection.destroy({ where: { userId }, transaction: t });
 
       // 8. The user.
       await user.destroy({ transaction: t });

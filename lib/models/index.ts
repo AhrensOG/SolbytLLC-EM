@@ -8,6 +8,8 @@ import { TeamMember } from "./TeamMember";
 import { Invitation } from "./Invitation";
 import { RecurringExpense } from "./RecurringExpense";
 import { RecurringExpenseTeam } from "./RecurringExpenseTeam";
+import { BankConnection } from "./BankConnection";
+import { ImportDraft } from "./ImportDraft";
 import type { Model, ModelStatic } from "sequelize";
 
 // ── Associations (centralized to avoid import cycles) ──
@@ -64,6 +66,11 @@ assoc(RecurringExpenseTeam, "belongsTo", RecurringExpense, {
 });
 assoc(RecurringExpenseTeam, "belongsTo", Team, { foreignKey: "teamId", as: "team" });
 
+assoc(BankConnection, "belongsTo", User, { foreignKey: "userId", as: "user" });
+assoc(User, "hasMany", BankConnection, { foreignKey: "userId", as: "bankConnections" });
+assoc(ImportDraft, "belongsTo", User, { foreignKey: "userId", as: "user" });
+assoc(User, "hasMany", ImportDraft, { foreignKey: "userId", as: "importDrafts" });
+
 export {
   User,
   Currency,
@@ -74,6 +81,8 @@ export {
   Invitation,
   RecurringExpense,
   RecurringExpenseTeam,
+  BankConnection,
+  ImportDraft,
 };
 
 export async function syncDatabase(opts: { alter?: boolean } = {}) {
