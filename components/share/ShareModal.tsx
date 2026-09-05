@@ -63,7 +63,7 @@ export function ShareModal({
             No tienes equipos. Crea uno primero para poder compartir.
           </p>
         ) : (
-          <ul className="flex flex-col gap-2">
+          <ul className="flex max-h-[50dvh] flex-col gap-2 overflow-y-auto overscroll-contain pr-1">
             {teams.map((team) => {
               const checked = selected.has(team.id);
               return (

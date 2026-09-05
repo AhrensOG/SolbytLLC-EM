@@ -37,7 +37,7 @@ export function Modal({ open, onClose, title, children, className }: ModalProps)
             role="dialog"
             aria-modal="true"
             className={cn(
-              "w-full max-w-lg rounded-t-2xl border border-border bg-card p-6 shadow-xl sm:rounded-2xl",
+              "flex w-full max-w-lg max-h-[88dvh] flex-col rounded-t-2xl border border-border bg-card shadow-xl sm:max-h-[85vh] sm:rounded-2xl",
               className,
             )}
             initial={{ y: 40, opacity: 0 }}
@@ -46,19 +46,21 @@ export function Modal({ open, onClose, title, children, className }: ModalProps)
             transition={{ type: "spring", damping: 26, stiffness: 300 }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="mb-4 flex items-center justify-between">
+            <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border px-6 py-4">
               {title && (
-                <h2 className="text-lg font-semibold text-card-foreground">{title}</h2>
+                <h2 className="truncate text-lg font-semibold text-card-foreground">{title}</h2>
               )}
               <button
                 onClick={onClose}
-                className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                className="shrink-0 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                 aria-label="Cerrar"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
-            {children}
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:pb-6">
+              {children}
+            </div>
           </motion.div>
         </motion.div>
       )}
