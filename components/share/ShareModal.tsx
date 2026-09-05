@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { motion } from "framer-motion";
 import { Users } from "lucide-react";
 import { useTeams } from "@/lib/hooks/useTeams";
 import { Modal } from "@/components/ui/Modal";
@@ -64,10 +65,19 @@ export function ShareModal({
           </p>
         ) : (
           <ul className="flex max-h-[50dvh] flex-col gap-2 overflow-y-auto overscroll-contain pr-1">
-            {teams.map((team) => {
+            {teams.map((team, index) => {
               const checked = selected.has(team.id);
               return (
-                <li key={team.id}>
+                <motion.li
+                  key={team.id}
+                  initial={{ opacity: 0, y: -6, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{
+                    duration: 0.18,
+                    ease: "easeOut",
+                    delay: index * 0.03,
+                  }}
+                >
                   <button
                     type="button"
                     onClick={() => toggle(team.id)}
@@ -95,7 +105,7 @@ export function ShareModal({
                       {checked ? "✓" : ""}
                     </span>
                   </button>
-                </li>
+                </motion.li>
               );
             })}
           </ul>

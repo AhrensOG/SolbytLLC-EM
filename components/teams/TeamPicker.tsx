@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { ChevronDown, Search, Users, X } from "lucide-react";
 import { useTeams } from "@/lib/hooks/useTeams";
 import { Input } from "@/components/ui/Input";
@@ -72,56 +73,76 @@ export function TeamPicker({
         />
       </button>
 
-      {open && (
-        <div className="flex flex-col gap-2 rounded-xl border border-border bg-card p-2">
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              aria-label={`Buscar ${label.toLowerCase()}`}
-              placeholder="Buscar…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9"
-            />
-          </div>
-          <ul className="max-h-64 flex-col gap-1 overflow-y-auto">
-            {filtered.map((team) => {
-              const checked = selected.has(team.id);
-              return (
-                <li key={team.id}>
-                  <button
-                    type="button"
-                    onClick={() => toggle(team.id)}
-                    className={cn(
-                      "flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors hover:bg-muted",
-                      checked && "bg-muted",
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        "flex h-5 w-5 shrink-0 items-center justify-center rounded-md border text-xs transition-colors",
-                        checked
-                          ? "border-primary bg-primary text-primary-foreground"
-                          : "border-border",
-                      )}
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.24, ease: "easeInOut" }}
+            className="overflow-hidden"
+          >
+            <div className="flex flex-col gap-2 rounded-xl border border-border bg-card p-2">
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  aria-label={`Buscar ${label.toLowerCase()}`}
+                  placeholder="Buscar…"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <ul className="max-h-64 flex-col gap-1 overflow-y-auto">
+                {filtered.map((team, index) => {
+                  const checked = selected.has(team.id);
+                  return (
+                    <motion.li
+                      key={team.id}
+                      initial={{ opacity: 0, y: -6, scale: 0.98 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{
+                        duration: 0.18,
+                        ease: "easeOut",
+                        delay: index * 0.03,
+                      }}
                     >
-                      {checked ? "✓" : ""}
-                    </span>
-                    <span className="flex-1 truncate text-sm font-medium text-card-foreground">
-                      {team.name}
-                    </span>
-                  </button>
-                </li>
-              );
-            })}
-            {filtered.length === 0 && (
-              <li className="px-2 py-3 text-center text-sm text-muted-foreground">
-                No se encontraron equipos
-              </li>
-            )}
-          </ul>
-        </div>
-      )}
+                      <button
+                        type="button"
+                        onClick={() => toggle(team.id)}
+                        className={cn(
+                          "flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors hover:bg-muted",
+                          checked && "bg-muted",
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            "flex h-5 w-5 shrink-0 items-center justify-center rounded-md border text-xs transition-colors",
+                            checked
+                              ? "border-primary bg-primary text-primary-foreground"
+                              : "border-border",
+                          )}
+                        >
+                          {checked ? "✓" : ""}
+                        </span>
+                        <span className="flex-1 truncate text-sm font-medium text-card-foreground">
+                          {team.name}
+                        </span>
+                      </button>
+                    </motion.li>
+                  );
+                })}
+                {filtered.length === 0 && (
+                  <li className="px-2 py-3 text-center text-sm text-muted-foreground">
+                    No se encontraron equipos
+                  </li>
+                )}
+              </ul>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {selectedTeams.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
