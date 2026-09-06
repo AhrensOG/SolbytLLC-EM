@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { z } from "zod";
 import { getSessionUserId } from "@/lib/auth-helpers";
 import { Category, Currency, Transaction } from "@/lib/models";
 import { serializeTransaction } from "@/lib/serialize";
@@ -56,7 +57,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
   }
 }
 
-export async function DELETE(_req: NextRequest, { params }: Params) {
+export async function DELETE(req: NextRequest, { params }: Params) {
   try {
     const userId = await getSessionUserId();
     if (!userId) return unauthorized();
@@ -65,8 +66,24 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
     const transaction = await findOwnedTransaction(id, userId);
     if (!transaction) return error("Transacción no encontrada", 404);
 
+    const body = await req.json().catch(() => ({}));
+    const parsed = z
+      .object({ removeFromTeams: z.array(z.string()).optional() })
+      .safeParse(body);
+    const teamIds = parsed.success ? parsed.data.removeFromTeams : undefined;
+
+    let removedTeams = 0;
+    if (teamIds && teamIds.length > 0) {
+      for (const teamId of teamIds) {
+        await Transaction.destroy({
+          where: { userId, teamId, importKey: `imp:${transaction.id}:${teamId}` },
+        });
+        removedTeams += 1;
+      }
+    }
+
     await transaction.destroy();
-    return json({ ok: true });
+    return json({ ok: true, removedTeams });
   } catch (err) {
     return handleApiError(err);
   }

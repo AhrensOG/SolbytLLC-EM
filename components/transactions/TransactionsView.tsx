@@ -50,6 +50,7 @@ export function TransactionsView() {
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [shareOpen, setShareOpen] = useState(false);
+  const [removeFromTeams, setRemoveFromTeams] = useState<Set<string>>(new Set());
 
   const { data: transactions, isLoading } = useTransactions({
     type: type || undefined,
@@ -60,6 +61,7 @@ export function TransactionsView() {
     data: editingTeams,
     mutate: mutateEditingTeams,
   } = useTransactionTeams(editing?.id ?? null);
+  const { data: deleteTeams } = useTransactionTeams(deleting?.id ?? null);
   const { data: categories } = useCategories();
   const currency = useDefaultCurrency();
   const code = currency?.code ?? "USD";
@@ -103,24 +105,50 @@ export function TransactionsView() {
     exitSelectMode();
   }
 
+  function toggleRemoveTeam(teamId: string) {
+    setRemoveFromTeams((prev) => {
+      const next = new Set(prev);
+      if (next.has(teamId)) next.delete(teamId);
+      else next.add(teamId);
+      return next;
+    });
+  }
+
+  function markAllTeams(checked: boolean) {
+    if (!deleteTeams) return;
+    setRemoveFromTeams(checked ? new Set(deleteTeams.map((t) => t.teamId)) : new Set());
+  }
+
   async function handleDelete() {
     if (!deleting) return;
     setDeletingLoading(true);
-    const res = await fetch(`/api/transactions/${deleting.id}`, { method: "DELETE" });
+    const res = await fetch(`/api/transactions/${deleting.id}`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ removeFromTeams: [...removeFromTeams] }),
+    });
 
     if (!res.ok) {
       setDeletingLoading(false);
-      toast.error("No se pudo eliminar la transacción");
+      const body = await res.json().catch(() => null);
+      toast.error(body?.error ?? "No se pudo eliminar la transacción");
       return;
     }
 
+    const data = await res.json();
     setDeletingLoading(false);
     setDeleting(null);
-    toast.success("Transacción eliminada");
+    setRemoveFromTeams(new Set());
+    toast.success(
+      (data?.removedTeams ?? 0) > 0
+        ? `Transacción eliminada · y de ${data.removedTeams} equipo${data.removedTeams === 1 ? "" : "s"}`
+        : "Transacción eliminada",
+    );
     await mutate(
       (key) => typeof key === "string" && key.startsWith("/api/transactions"),
     );
     await mutate((key) => typeof key === "string" && key.startsWith("/api/stats"));
+    await mutate((key) => typeof key === "string" && key.startsWith("/api/teams"));
   }
 
   function handleExport() {
@@ -307,7 +335,10 @@ export function TransactionsView() {
                 transaction={tx}
                 currencyCode={code}
                 onEdit={selectMode ? undefined : setEditing}
-                onDelete={selectMode ? undefined : setDeleting}
+                onDelete={selectMode ? undefined : (tx) => {
+                  setRemoveFromTeams(new Set());
+                  setDeleting(tx);
+                }}
                 onDuplicate={selectMode ? undefined : handleDuplicate}
                 onConvertRecurring={selectMode ? undefined : setConverting}
                 selectable={selectMode}
@@ -360,6 +391,61 @@ export function TransactionsView() {
           ¿Seguro que quieres eliminar esta transacción? Esta acción no se puede
           deshacer.
         </p>
+
+        {(deleteTeams ?? []).length > 0 && (
+          <div className="mt-4 flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-foreground">
+                Eliminar también de los equipos
+              </span>
+              <div className="flex gap-2 text-xs">
+                <button
+                  type="button"
+                  onClick={() => markAllTeams(true)}
+                  className="font-medium text-primary hover:underline"
+                >
+                  Marcar todos
+                </button>
+                <button
+                  type="button"
+                  onClick={() => markAllTeams(false)}
+                  className="font-medium text-muted-foreground hover:underline"
+                >
+                  Desmarcar todos
+                </button>
+              </div>
+            </div>
+            <ul className="flex flex-col gap-1.5">
+              {(deleteTeams ?? []).map((shared) => {
+                const checked = removeFromTeams.has(shared.teamId);
+                return (
+                  <li key={shared.teamId}>
+                    <button
+                      type="button"
+                      onClick={() => toggleRemoveTeam(shared.teamId)}
+                      className="flex w-full items-center gap-3 rounded-lg border border-border px-3 py-2 text-left transition-colors"
+                    >
+                      <span
+                        className={cn(
+                          "flex h-5 w-5 shrink-0 items-center justify-center rounded-md border text-xs transition-colors",
+                          checked
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-border",
+                        )}
+                      >
+                        {checked ? "✓" : ""}
+                      </span>
+                      <span className="flex-1 truncate text-sm font-medium text-card-foreground">
+                        {shared.teamName}
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
+
         <div className="mt-6 flex justify-end gap-2">
           <Button variant="ghost" onClick={() => setDeleting(null)}>
             Cancelar
