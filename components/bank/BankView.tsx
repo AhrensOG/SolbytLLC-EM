@@ -76,6 +76,7 @@ export function BankView() {
   const [institutionsOpen, setInstitutionsOpen] = useState(false);
   const [institutions, setInstitutions] = useState<Institution[]>([]);
   const [institutionsLoading, setInstitutionsLoading] = useState(false);
+  const [institutionsError, setInstitutionsError] = useState(false);
   const [country, setCountry] = useState("ES");
   const [search, setSearch] = useState("");
   const [linking, setLinking] = useState(false);
@@ -100,12 +101,14 @@ export function BankView() {
 
   async function loadInstitutions(countryCode: string) {
     setInstitutionsLoading(true);
+    setInstitutionsError(false);
     try {
       const res = await fetch(`/api/bank/institutions?country=${countryCode}`);
       if (!res.ok) throw new Error();
       setInstitutions(await res.json());
     } catch {
-      toast.error("No se pudieron cargar los bancos");
+      setInstitutionsError(true);
+      toast.error("No se pudieron cargar los bancos. Inténtalo de nuevo.");
     } finally {
       setInstitutionsLoading(false);
     }
@@ -113,7 +116,7 @@ export function BankView() {
 
   async function openInstitutions() {
     setInstitutionsOpen(true);
-    if (institutions.length === 0) {
+    if (institutions.length === 0 || institutionsError) {
       void loadInstitutions(country);
     }
   }
@@ -121,6 +124,7 @@ export function BankView() {
   async function handleCountryChange(code: string) {
     setCountry(code);
     setSearch("");
+    setInstitutions([]);
     void loadInstitutions(code);
   }
 
@@ -479,6 +483,21 @@ export function BankView() {
 
           {institutionsLoading ? (
             <ListSkeleton rows={5} />
+          ) : institutionsError ? (
+            <div className="flex flex-col items-center gap-3 rounded-xl border border-border bg-muted/40 p-6 text-center">
+              <Landmark className="h-6 w-6 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">
+                Bancos no disponibles. El servicio puede estar ocupado o en
+                mantenimiento. Vuelve a intentarlo.
+              </p>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => loadInstitutions(country)}
+              >
+                <RefreshCw className="h-4 w-4" /> Reintentar
+              </Button>
+            </div>
           ) : (
             <ul className="max-h-80 flex-col gap-1 overflow-y-auto">
               {filteredInstitutions.map((institution) => (

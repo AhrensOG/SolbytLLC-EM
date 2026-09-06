@@ -71,30 +71,66 @@ async function apiRequest<T>(
   options: { method?: string; body?: unknown; headers?: Record<string, string> } = {},
 ): Promise<T> {
   const method = options.method ?? "GET";
-  const res = await fetch(`${API_BASE}${path}`, {
-    method,
-    headers: {
-      Authorization: `Bearer ${buildJwt()}`,
-      Accept: "application/json",
-      ...(options.body !== undefined ? { "Content-Type": "application/json" } : {}),
-      ...options.headers,
-    },
-    ...(options.body !== undefined ? { body: JSON.stringify(options.body) } : {}),
-  });
 
-  const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+  const attempt = async (): Promise<T> => {
+    const res = await fetch(`${API_BASE}${path}`, {
+      method,
+      headers: {
+        Authorization: `Bearer ${buildJwt()}`,
+        Accept: "application/json",
+        ...(options.body !== undefined ? { "Content-Type": "application/json" } : {}),
+        ...options.headers,
+      },
+      ...(options.body !== undefined ? { body: JSON.stringify(options.body) } : {}),
+      signal: AbortSignal.timeout(20000),
+    });
 
-  if (!res.ok) {
-    const code =
-      typeof data.error === "string" ? data.error : `HTTP_${res.status}`;
-    const description =
-      (typeof data.description === "string" && data.description) ||
-      (typeof data.message === "string" && data.message) ||
-      undefined;
-    throw new EnableError(code, res.status, description);
+    const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+
+    if (!res.ok) {
+      const code =
+        typeof data.error === "string" ? data.error : `HTTP_${res.status}`;
+      const description =
+        (typeof data.description === "string" && data.description) ||
+        (typeof data.message === "string" && data.message) ||
+        undefined;
+      throw new EnableError(code, res.status, description);
+    }
+
+    return data as T;
+  };
+
+  const maxAttempts = 3;
+  for (let attemptNo = 1; attemptNo <= maxAttempts; attemptNo++) {
+    try {
+      return await attempt();
+    } catch (err) {
+      const isNetworkError =
+        err instanceof TypeError ||
+        (err instanceof DOMException && err.name === "TimeoutError") ||
+        (err &&
+          typeof err === "object" &&
+          "cause" in err &&
+          err.cause &&
+          typeof err.cause === "object" &&
+          "code" in err.cause &&
+          String((err.cause as { code: unknown }).code).startsWith("UND_ERR_"));
+
+      if (!isNetworkError || attemptNo === maxAttempts) {
+        if (isNetworkError) {
+          throw new EnableError(
+            "NETWORK_TIMEOUT",
+            503,
+            "No se pudo conectar con Enable Banking",
+          );
+        }
+        throw err;
+      }
+      await new Promise((resolve) => setTimeout(resolve, attemptNo * 700));
+    }
   }
 
-  return data as T;
+  throw new EnableError("NETWORK_TIMEOUT", 503, "No se pudo conectar con Enable Banking");
 }
 
 export interface Aspsp {
