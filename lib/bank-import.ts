@@ -6,9 +6,7 @@ import {
   Transaction,
 } from "@/lib/models";
 import {
-  getAccountDetails,
   getAccountTransactions,
-  getSession,
   type EnableTransaction,
 } from "@/lib/enablebanking";
 
@@ -73,90 +71,64 @@ export async function syncBankTransactions(
   if (!connection.sessionId) {
     throw new Error("La conexión bancaria no tiene sesión activa");
   }
-
-  const session = await getSession(connection.sessionId);
-  const accountIds = session.accountIds;
-  if (session.validUntil) {
-    await connection.update({ validUntil: new Date(session.validUntil) });
-  }
-  if (accountIds.length === 0) {
-    return { created: 0, skipped: 0 };
+  if (!connection.accountExternalId) {
+    throw new Error("La conexión no tiene cuenta asignada");
   }
 
-  const accounts: {
-    id: string;
-    iban: string | null;
-    name: string | null;
-    currency: string | null;
-  }[] = [];
-  for (const accountId of accountIds) {
-    try {
-      accounts.push(await getAccountDetails(accountId));
-    } catch {
-      // Unknown/inaccessible account: skip.
-    }
-  }
-
-  await connection.update({
-    accountsJson: JSON.stringify(accounts),
+  const transactions = await getAccountTransactions(connection.accountExternalId, {
+    dateFrom,
+    psuHeaders: opts.psuHeaders,
   });
 
   let created = 0;
   let skipped = 0;
 
-  for (const account of accounts) {
-    const transactions = await getAccountTransactions(account.id, {
-      dateFrom,
-      psuHeaders: opts.psuHeaders,
-    });
-    if (transactions.length === 0) continue;
+  if (transactions.length === 0) {
+    await connection.update({ lastSyncedAt: new Date() });
+    return { created, skipped };
+  }
 
-    const importKeys = transactions.map((tx) =>
-      importKeyFor(account.id, tx.externalId),
-    );
+  const importKeys = transactions.map((tx) =>
+    importKeyFor(connection.accountExternalId!, tx.externalId),
+  );
 
-    const existingConfirmed = await Transaction.findAll({
-      where: { userId, importKey: { [Op.in]: importKeys } },
-      attributes: ["importKey"],
-    });
-    const existingDrafts = await ImportDraft.findAll({
-      where: { userId, transactionExternalId: { [Op.in]: importKeys } },
-      attributes: ["transactionExternalId"],
-    });
+  const existingConfirmed = await Transaction.findAll({
+    where: { userId, importKey: { [Op.in]: importKeys } },
+    attributes: ["importKey"],
+  });
+  const existingDrafts = await ImportDraft.findAll({
+    where: { userId, transactionExternalId: { [Op.in]: importKeys } },
+    attributes: ["transactionExternalId"],
+  });
 
-    const confirmedKeys = new Set(
-      existingConfirmed.map((t) => t.importKey),
-    );
-    const draftKeys = new Set(
-      existingDrafts.map((d) => d.transactionExternalId),
-    );
-    const pending = transactions.filter((tx) => {
-      const key = importKeyFor(account.id, tx.externalId);
-      return !confirmedKeys.has(key) && !draftKeys.has(key);
-    });
+  const confirmedKeys = new Set(existingConfirmed.map((t) => t.importKey));
+  const draftKeys = new Set(
+    existingDrafts.map((d) => d.transactionExternalId),
+  );
 
-    for (const tx of pending) {
-      const normalized = normalizeTx(tx);
-      const categoryId = await suggestCategory(
-        normalized.description,
-        userId,
-      );
-      await ImportDraft.create({
-        userId,
-        connectionId: connection.id,
-        accountExternalId: account.id,
-        transactionExternalId: importKeyFor(account.id, tx.externalId),
-        bookingDate: normalized.date,
-        amount: normalized.amount,
-        currencyCode: normalized.currencyCode,
-        description: normalized.description,
-        counterpartyName: null,
-        categoryId,
-        status: "pending",
-      });
-      created += 1;
+  for (const tx of transactions) {
+    const key = importKeyFor(connection.accountExternalId!, tx.externalId);
+    if (confirmedKeys.has(key) || draftKeys.has(key)) {
+      skipped += 1;
+      continue;
     }
-    skipped += pending.length === 0 ? transactions.length : 0;
+
+    const normalized = normalizeTx(tx);
+    const categoryId = await suggestCategory(normalized.description, userId);
+    await ImportDraft.create({
+      userId,
+      connectionId: connection.id,
+      accountExternalId: connection.accountExternalId!,
+      transactionExternalId: key,
+      bookingDate: normalized.date,
+      amount: normalized.amount,
+      currencyCode: normalized.currencyCode,
+      description: normalized.description,
+      counterpartyName: null,
+      categoryId,
+      status: "pending",
+    });
+    created += 1;
   }
 
   await connection.update({ lastSyncedAt: new Date() });

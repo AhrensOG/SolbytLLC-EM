@@ -1,19 +1,16 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import useSWR from "swr";
-import { useSWRConfig } from "swr";
 import { toast } from "sonner";
-import { Landmark, Link2, Plus, RefreshCw, Search, Unlink } from "lucide-react";
+import Link from "next/link";
+import { Landmark, Link2, Plus, RefreshCw, Search } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
-import { EmptyState } from "@/components/ui/EmptyState";
 import { ListSkeleton, Skeleton } from "@/components/ui/Skeleton";
-import { useCategories } from "@/lib/hooks/useCategories";
-import { formatDate, formatMoney } from "@/lib/format";
 import { cn } from "@/lib/cn";
 
 const COUNTRIES = [
@@ -29,18 +26,22 @@ const COUNTRIES = [
   { code: "PL", label: "Polonia" },
 ];
 
-interface BankStatus {
-  connected: boolean;
+interface BankConnectionInfo {
+  id: string;
+  institutionId: string;
+  institutionName: string | null;
+  accountName: string | null;
+  accountIban: string | null;
+  accountCurrency: string | null;
+  status: string | null;
+  validUntil: string | null;
+  lastSyncedAt: string | null;
   pendingCount: number;
-  connection: {
-    id: string;
-    institutionId: string | null;
-    institutionName: string | null;
-    status: string | null;
-    validUntil: string | null;
-    lastSyncedAt: string | null;
-    accountCount: number;
-  } | null;
+}
+
+interface BankStatus {
+  connections: BankConnectionInfo[];
+  totalPending: number;
 }
 
 interface Institution {
@@ -49,29 +50,26 @@ interface Institution {
   country: string;
 }
 
-interface BankDraft {
-  id: string;
-  amount: number;
-  currencyCode: string;
-  bookingDate: string;
-  description: string;
-  categoryId: string | null;
-  status: "pending" | "confirmed" | "rejected";
+function shortIban(iban: string | null): string {
+  if (!iban) return "";
+  return `${iban.slice(0, 4)}••${iban.slice(-4)}`;
 }
 
-function money(draft: BankDraft) {
-  return `${draft.amount < 0 ? "-" : "+"}${formatMoney(Math.abs(draft.amount), draft.currencyCode)}`;
+function displayAccount(c: BankConnectionInfo): string {
+  if (c.accountName) return c.accountName;
+  if (c.accountIban) return shortIban(c.accountIban);
+  return c.institutionName ?? "Cuenta";
+}
+
+function displaySub(c: BankConnectionInfo): string {
+  if (c.accountIban) return `${shortIban(c.accountIban)}${c.accountCurrency ? ` · ${c.accountCurrency}` : ""}`;
+  return c.institutionName ?? "";
 }
 
 export function BankView() {
-  const { mutate } = useSWRConfig();
   const { data: status, isLoading: statusLoading } = useSWR<BankStatus>(
     "/api/bank/status",
   );
-  const { data: drafts, isLoading: draftsLoading } = useSWR<BankDraft[]>(
-    "/api/bank/drafts",
-  );
-  const { data: categories } = useCategories();
 
   const [institutionsOpen, setInstitutionsOpen] = useState(false);
   const [institutions, setInstitutions] = useState<Institution[]>([]);
@@ -79,25 +77,7 @@ export function BankView() {
   const [institutionsError, setInstitutionsError] = useState(false);
   const [country, setCountry] = useState("ES");
   const [search, setSearch] = useState("");
-  const [linking, setLinking] = useState(false);
-  const [syncing, setSyncing] = useState(false);
-  const [confirming, setConfirming] = useState(false);
-  const [pendingCategoryId, setPendingCategoryId] = useState("");
-  const [categoryMap, setCategoryMap] = useState<Record<string, string>>({});
-  const [disconnecting, setDisconnecting] = useState(false);
-
-  const autoSynced = useRef(false);
-
-  const pending = (drafts ?? []).filter((d) => d.status === "pending");
-
-  useEffect(() => {
-    if (autoSynced.current) return;
-    if (status?.connected) {
-      autoSynced.current = true;
-      void syncNow();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status?.connected]);
+  const [linkingId, setLinkingId] = useState<string | null>(null);
 
   async function loadInstitutions(countryCode: string) {
     setInstitutionsLoading(true);
@@ -129,7 +109,7 @@ export function BankView() {
   }
 
   async function handleLink(institutionId: string) {
-    setLinking(true);
+    setLinkingId(institutionId);
     const res = await fetch("/api/bank/connect", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -137,111 +117,12 @@ export function BankView() {
     });
     if (!res.ok) {
       const body = await res.json().catch(() => null);
-      setLinking(false);
+      setLinkingId(null);
       toast.error(body?.error ?? "No se pudo iniciar la conexión");
       return;
     }
     const data = await res.json();
-    window.location.href = data.link;
-  }
-
-  async function handleRenew() {
-    if (!status?.connection?.institutionId) return;
-    setLinking(true);
-    const res = await fetch("/api/bank/connect", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ institutionId: status.connection.institutionId }),
-    });
-    if (!res.ok) {
-      const body = await res.json().catch(() => null);
-      setLinking(false);
-      toast.error(body?.error ?? "No se pudo renovar el acceso");
-      return;
-    }
-    const data = await res.json();
-    window.location.href = data.link;
-  }
-
-  async function syncNow() {
-    setSyncing(true);
-    const res = await fetch("/api/bank/sync?days=30", { method: "POST" });
-    setSyncing(false);
-    if (!res.ok) {
-      const body = await res.json().catch(() => null);
-      toast.error(body?.error ?? "No se pudo sincronizar el banco");
-      return;
-    }
-    const data = await res.json();
-    await mutate("/api/bank/status");
-    await mutate("/api/bank/drafts");
-    toast.success(
-      data.created > 0
-        ? `Sincronizado: ${data.created} movimiento${data.created === 1 ? "" : "s"} nuevo${data.created === 1 ? "" : "s"}`
-        : "Sin movimientos nuevos",
-    );
-  }
-
-  async function handleDraftAction(id: string, action: "confirm" | "reject") {
-    const categoryId = categoryMap[id] ?? pendingCategoryId;
-    if (action === "confirm" && !categoryId) {
-      toast.error("Selecciona una categoría");
-      return;
-    }
-    const res = await fetch(`/api/bank/drafts/${id}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action, categoryId }),
-    });
-    if (!res.ok) {
-      const body = await res.json().catch(() => null);
-      toast.error(body?.error ?? "No se pudo procesar el movimiento");
-      return;
-    }
-    await mutate("/api/bank/drafts");
-    await mutate("/api/bank/status");
-    await mutate((key) => typeof key === "string" && key.startsWith("/api/transactions"));
-    await mutate((key) => typeof key === "string" && key.startsWith("/api/stats"));
-    toast.success(action === "confirm" ? "Movimiento confirmado" : "Movimiento descartado");
-  }
-
-  async function handleConfirmAll() {
-    setConfirming(true);
-    const res = await fetch("/api/bank/drafts", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ categoryId: pendingCategoryId || undefined }),
-    });
-    setConfirming(false);
-    if (!res.ok) {
-      const body = await res.json().catch(() => null);
-      toast.error(body?.error ?? "No se pudieron confirmar los movimientos");
-      return;
-    }
-    const data = await res.json();
-    await mutate("/api/bank/drafts");
-    await mutate("/api/bank/status");
-    await mutate((key) => typeof key === "string" && key.startsWith("/api/transactions"));
-    await mutate((key) => typeof key === "string" && key.startsWith("/api/stats"));
-    toast.success(
-      data.skipped > 0
-        ? `${data.confirmed} confirmados · ${data.skipped} requieren categoría`
-        : `${data.confirmed} confirmados`,
-    );
-  }
-
-  async function handleDisconnect() {
-    setDisconnecting(true);
-    const res = await fetch("/api/bank", { method: "DELETE" });
-    setDisconnecting(false);
-    if (!res.ok) {
-      const body = await res.json().catch(() => null);
-      toast.error(body?.error ?? "No se pudo desconectar");
-      return;
-    }
-    await mutate("/api/bank/status");
-    await mutate("/api/bank/drafts");
-    toast.success("Cuenta bancaria desconectada");
+    window.location.assign(data.link);
   }
 
   if (statusLoading) {
@@ -250,207 +131,98 @@ export function BankView() {
         <Card className="space-y-4 p-6">
           <Skeleton className="h-5 w-40" />
           <Skeleton className="h-4 w-2/3" />
-          <Skeleton className="h-10 w-40" />
         </Card>
+        <div className="flex flex-col gap-3">
+          <Skeleton className="h-16 w-full rounded-xl" />
+          <Skeleton className="h-16 w-full rounded-xl" />
+        </div>
       </div>
     );
   }
 
+  const connections = status?.connections ?? [];
   const filteredInstitutions = institutions.filter((i) =>
     i.name.toLowerCase().includes(search.toLowerCase()),
   );
 
   return (
     <div className="flex flex-col gap-6">
-      {status?.connected && status.connection ? (
-        <Card className="p-6">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                <Landmark className="h-5 w-5" />
-              </div>
-              <div>
-                <h3 className="text-base font-semibold text-card-foreground">
-                  {status.connection.institutionName ?? "Cuenta conectada"}
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  {status.connection.accountCount} cuenta
-                  {status.connection.accountCount === 1 ? "" : "s"} · Última
-                  sincronización:{" "}
-                  {status.connection.lastSyncedAt
-                    ? new Date(status.connection.lastSyncedAt).toLocaleString("es")
-                    : "nunca"}
-                </p>
-                {status.connection.validUntil && (
-                  <p className="text-xs text-muted-foreground">
-                    Acceso válido hasta{" "}
-                    {new Date(status.connection.validUntil).toLocaleDateString("es")}
-                  </p>
-                )}
-              </div>
-            </div>
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <Button size="sm" variant="outline" loading={syncing} onClick={syncNow}>
-                <RefreshCw className="h-4 w-4" /> Sincronizar
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                loading={linking}
-                onClick={handleRenew}
-              >
-                Renovar
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="text-destructive hover:bg-destructive/10"
-                loading={disconnecting}
-                onClick={handleDisconnect}
-              >
-                <Unlink className="h-4 w-4" /> Desconectar
-              </Button>
-            </div>
-          </div>
-        </Card>
-      ) : (
-        <Card className="p-6">
-          <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                <Link2 className="h-5 w-5" />
-              </div>
-              <div>
-                <h3 className="text-base font-semibold text-card-foreground">
-                  Conecta tu banco
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  Importa tus movimientos automáticamente (solo lectura, vía
-                  open banking / Enable Banking).
-                </p>
-              </div>
-            </div>
-            <Button onClick={openInstitutions}>
-              <Plus className="h-4 w-4" /> Conectar banco
-            </Button>
-          </div>
-        </Card>
-      )}
-
       <Card className="p-6">
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-base font-semibold text-card-foreground">
-            Movimientos del banco
-          </h3>
-          {pending.length > 0 && (
-            <Button size="sm" loading={confirming} onClick={handleConfirmAll}>
-              Confirmar todo
-            </Button>
-          )}
-        </div>
-
-        <p className="mb-4 text-sm text-muted-foreground">
-          Revisa y confirma los movimientos importados. Los confirmados se
-          agregan a tus transacciones; los descartados se ignoran.
-        </p>
-
-        {pending.length > 0 && (
-          <div className="mb-4 flex items-center gap-2">
-            <Select
-              label="Categoría para todos"
-              value={pendingCategoryId}
-              onChange={(e) => setPendingCategoryId(e.target.value)}
-              className="max-w-xs"
-            >
-              <option value="">Sin categoría</option>
-              {(categories ?? []).map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </Select>
+        <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <Link2 className="h-5 w-5" />
+            </div>
+            <div>
+              <h3 className="text-base font-semibold text-card-foreground">
+                Conecta tu banco
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Importa tus movimientos automáticamente (solo lectura, vía
+                open banking / Enable Banking).
+              </p>
+            </div>
           </div>
-        )}
+          <Button onClick={openInstitutions}>
+            <Plus className="h-4 w-4" /> Conectar banco
+          </Button>
+        </div>
+      </Card>
 
-        {draftsLoading ? (
-          <ListSkeleton rows={4} />
-        ) : pending.length === 0 ? (
-          <EmptyState
-            icon={Landmark}
-            title="Sin movimientos pendientes"
-            description={
-              status?.connected
-                ? "Pulsa «Sincronizar» para buscar movimientos nuevos en tu banco."
-                : "Conecta tu banco para empezar a importar movimientos."
-            }
-          />
+      <div className="flex flex-col gap-4">
+        <h3 className="text-lg font-semibold text-foreground">Tus cuentas</h3>
+
+        {connections.length === 0 ? (
+          <Card className="p-6">
+            <div className="flex flex-col items-center gap-3 text-center">
+              <Landmark className="h-6 w-6 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">
+                Todavía no has conectado ninguna cuenta.
+              </p>
+            </div>
+          </Card>
         ) : (
-          <ul className="flex flex-col gap-2">
-            {pending.map((draft) => (
-              <li
-                key={draft.id}
-                className="flex flex-col gap-3 rounded-xl border border-border p-3 sm:flex-row sm:items-center"
+          <div className="flex flex-col gap-3">
+            {connections.map((connection) => (
+              <Link
+                key={connection.id}
+                href={`/bank/${connection.id}`}
+                className="flex items-center gap-3 rounded-xl border border-border p-4 transition-colors hover:bg-muted/40 active:scale-[0.99]"
               >
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                  <Landmark className="h-5 w-5" />
+                </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-card-foreground">
-                    {draft.description}
+                    {displayAccount(connection)}
+                  </p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {displaySub(connection)}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {formatDate(draft.bookingDate)} · {draft.currencyCode}
+                    {connection.institutionName} ·{" "}
+                    {connection.validUntil
+                      ? `acceso hasta ${new Date(connection.validUntil).toLocaleDateString("es")}`
+                      : "conectada"}
                   </p>
                 </div>
-
-                <span
-                  className={cn(
-                    "text-sm font-semibold",
-                    draft.amount < 0 ? "text-expense" : "text-income",
+                <div className="flex shrink-0 flex-col items-end gap-1">
+                  {connection.pendingCount > 0 ? (
+                    <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
+                      {connection.pendingCount} pendiente
+                      {connection.pendingCount === 1 ? "" : "s"}
+                    </span>
+                  ) : (
+                    <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                      al día
+                    </span>
                   )}
-                >
-                  {money(draft)}
-                </span>
-
-                <div className="flex items-center gap-2">
-                  <Select
-                    aria-label="Categoría"
-                    value={categoryMap[draft.id] ?? draft.categoryId ?? ""}
-                    onChange={(e) =>
-                      setCategoryMap((prev) => ({
-                        ...prev,
-                        [draft.id]: e.target.value,
-                      }))
-                    }
-                    className="h-9 w-36 py-1 text-xs"
-                  >
-                    <option value="">Categoría</option>
-                    {(categories ?? []).map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </Select>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() =>
-                      handleDraftAction(draft.id, "confirm")
-                    }
-                  >
-                    Confirmar
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="text-muted-foreground"
-                    onClick={() => handleDraftAction(draft.id, "reject")}
-                  >
-                    Ignorar
-                  </Button>
                 </div>
-              </li>
+              </Link>
             ))}
-          </ul>
+          </div>
         )}
-      </Card>
+      </div>
 
       <Modal
         open={institutionsOpen}
@@ -499,27 +271,33 @@ export function BankView() {
               </Button>
             </div>
           ) : (
-            <ul className="max-h-80 flex-col gap-1 overflow-y-auto">
-              {filteredInstitutions.map((institution) => (
-                <li key={institution.id}>
-                  <button
-                    type="button"
-                    disabled={linking}
-                    onClick={() => handleLink(institution.id)}
-                    className="flex w-full items-center gap-3 rounded-lg px-2 py-2.5 text-left transition-colors hover:bg-muted"
-                  >
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-                      <Landmark className="h-4 w-4" />
-                    </div>
-                    <span className="flex-1 text-sm font-medium text-card-foreground">
-                      {institution.name}
-                    </span>
-                    <span className="text-xs uppercase text-muted-foreground">
-                      {institution.country}
-                    </span>
-                  </button>
-                </li>
-              ))}
+            <ul className="flex max-h-80 flex-col gap-1 overflow-y-auto">
+              {filteredInstitutions.map((institution) => {
+                const linkingRow = linkingId === institution.id;
+                return (
+                  <li key={institution.id}>
+                    <button
+                      type="button"
+                      disabled={!!linkingId}
+                      onClick={() => handleLink(institution.id)}
+                      className={cn(
+                        "flex w-full items-center gap-3 rounded-lg px-2 py-2.5 text-left transition-all active:scale-[0.98] active:bg-muted",
+                        linkingRow && "bg-muted/60",
+                      )}
+                    >
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                        <Landmark className="h-4 w-4" />
+                      </div>
+                      <span className="min-w-0 flex-1 truncate text-sm font-medium text-card-foreground">
+                        {institution.name}
+                      </span>
+                      <span className="shrink-0 rounded-md bg-muted px-1.5 py-0.5 text-xs font-semibold uppercase text-muted-foreground">
+                        {institution.country}
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
               {filteredInstitutions.length === 0 && (
                 <li className="px-2 py-4 text-center text-sm text-muted-foreground">
                   No se encontraron bancos

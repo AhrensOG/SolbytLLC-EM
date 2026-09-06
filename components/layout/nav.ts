@@ -5,6 +5,7 @@ import {
   Repeat,
   Users,
   Settings,
+  Landmark,
   type LucideIcon,
 } from "lucide-react";
 
@@ -31,5 +32,6 @@ export const NAV_ITEMS: NavItem[] = [
     icon: Repeat,
   },
   { href: "/teams", label: "Equipos", icon: Users },
+  { href: "/bank", label: "Banco", labelShort: "Banco", icon: Landmark },
   { href: "/settings", label: "Ajustes", icon: Settings },
 ];

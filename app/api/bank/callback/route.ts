@@ -17,22 +17,56 @@ export async function POST(req: NextRequest) {
     const parsed = callbackSchema.safeParse(body);
     if (!parsed.success) return error("Datos inválidos", 422);
 
-    const connection = await BankConnection.findOne({
+    const pending = await BankConnection.findOne({
       where: { userId, authState: parsed.data.state },
     });
-    if (!connection) return error("Conexión no encontrada", 404);
+    if (!pending) return error("Conexión no encontrada", 404);
 
     const session = await authorizeSession(parsed.data.code);
+    const validUntil = session.validUntil ? new Date(session.validUntil) : null;
 
-    await connection.update({
-      sessionId: session.sessionId,
-      status: "linked",
-      validUntil: session.validUntil ? new Date(session.validUntil) : null,
-      accountsJson: JSON.stringify(session.accounts),
-      authState: null,
-    });
+    for (const account of session.accounts) {
+      if (!account.id) continue;
+      const existing = await BankConnection.findOne({
+        where: {
+          userId,
+          provider: "enablebanking",
+          institutionId: pending.institutionId,
+          accountExternalId: account.id,
+        },
+      });
 
-    return json({ ok: true });
+      if (existing) {
+        await existing.update({
+          sessionId: session.sessionId,
+          status: "linked",
+          validUntil,
+          authState: null,
+          accountName: account.name ?? existing.accountName,
+          accountIban: account.iban ?? existing.accountIban,
+          accountCurrency: account.currency ?? existing.accountCurrency,
+        });
+      } else {
+        await BankConnection.create({
+          userId,
+          provider: "enablebanking",
+          sessionId: session.sessionId,
+          institutionId: pending.institutionId,
+          institutionName: pending.institutionName,
+          authState: null,
+          accountExternalId: account.id,
+          accountName: account.name,
+          accountIban: account.iban,
+          accountCurrency: account.currency,
+          status: "linked",
+          validUntil,
+        });
+      }
+    }
+
+    await pending.destroy();
+
+    return json({ ok: true, added: session.accounts.length });
   } catch (err) {
     return handleApiError(err);
   }

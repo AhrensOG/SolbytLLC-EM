@@ -6,29 +6,38 @@ export async function GET() {
   try {
     const userId = await requireUserId();
 
-    const connection = await BankConnection.findOne({ where: { userId } });
-    const pendingCount = await ImportDraft.count({
-      where: { userId, status: "pending" },
+    const connections = await BankConnection.findAll({
+      where: { userId },
+      order: [["createdAt", "ASC"]],
     });
 
+    const pendingCounts = await ImportDraft.findAll({
+      where: { userId, status: "pending" },
+      attributes: ["connectionId"],
+      raw: true,
+    });
+    const pendingMap: Record<string, number> = {};
+    for (const row of pendingCounts) {
+      const id = String(row.connectionId);
+      pendingMap[id] = (pendingMap[id] ?? 0) + 1;
+    }
+
+    const totalPending = Object.values(pendingMap).reduce((a, b) => a + b, 0);
+
     return json({
-      connected: !!connection,
-      pendingCount,
-      connection: connection
-        ? {
-            id: connection.id,
-            institutionId: connection.institutionId,
-            institutionName: connection.institutionName,
-            status: connection.status,
-            validUntil: connection.validUntil
-              ? new Date(connection.validUntil).toISOString()
-              : null,
-            lastSyncedAt: connection.lastSyncedAt,
-            accountCount: connection.accountsJson
-              ? (JSON.parse(connection.accountsJson) as unknown[]).length
-              : 0,
-          }
-        : null,
+      connections: connections.map((c) => ({
+        id: c.id,
+        institutionId: c.institutionId,
+        institutionName: c.institutionName,
+        accountName: c.accountName,
+        accountIban: c.accountIban,
+        accountCurrency: c.accountCurrency,
+        status: c.status,
+        validUntil: c.validUntil ? new Date(c.validUntil).toISOString() : null,
+        lastSyncedAt: c.lastSyncedAt,
+        pendingCount: c.id ? pendingMap[c.id] ?? 0 : 0,
+      })),
+      totalPending,
     });
   } catch (err) {
     return handleApiError(err);

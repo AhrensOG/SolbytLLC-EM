@@ -1,9 +1,10 @@
 import { NextRequest } from "next/server";
 import { randomUUID } from "crypto";
 import { z } from "zod";
+import { Op } from "sequelize";
 import { requireUserId } from "@/lib/auth-helpers";
 import { BankConnection } from "@/lib/models";
-import { deleteSession, startAuth } from "@/lib/enablebanking";
+import { startAuth } from "@/lib/enablebanking";
 import { error, handleApiError, json } from "@/lib/api";
 
 const connectSchema = z.object({
@@ -22,17 +23,10 @@ export async function POST(req: NextRequest) {
 
     const baseUrl = process.env.AUTH_URL ?? new URL(req.url).origin;
 
-    const existing = await BankConnection.findOne({ where: { userId } });
-    if (existing) {
-      if (existing.sessionId) {
-        try {
-          await deleteSession(existing.sessionId);
-        } catch {
-          // Ignore remote cleanup failures.
-        }
-      }
-      await existing.destroy();
-    }
+    // Remove only pending connections (not yet authorized).
+    await BankConnection.destroy({
+      where: { userId, authState: { [Op.ne]: null } },
+    });
 
     const state = randomUUID();
     const { url } = await startAuth({
@@ -47,7 +41,6 @@ export async function POST(req: NextRequest) {
       institutionName: name,
       authState: state,
       status: "pending",
-      accountsJson: null,
     });
 
     return json({ link: url });

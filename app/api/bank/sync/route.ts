@@ -8,8 +8,13 @@ import { error, handleApiError, json } from "@/lib/api";
 export async function POST(req: NextRequest) {
   try {
     const userId = await requireUserId();
-    const connection = await BankConnection.findOne({ where: { userId } });
-    if (!connection) return error("No hay ninguna cuenta bancaria conectada", 400);
+
+    const connectionId = new URL(req.url).searchParams.get("connectionId");
+    const where: { id?: string; userId: string } = { userId };
+    if (connectionId) where.id = connectionId;
+
+    const connection = await BankConnection.findOne({ where });
+    if (!connection) return error("Cuenta bancaria no encontrada", 404);
     if (!connection.sessionId) return error("La conexión no tiene sesión activa", 400);
 
     const daysParam = new URL(req.url).searchParams.get("days");
@@ -29,7 +34,7 @@ export async function POST(req: NextRequest) {
     return json({ ...result, syncedAt: new Date().toISOString() });
   } catch (err) {
     if (err instanceof EnableError && err.code === "EXPIRED_SESSION") {
-      return error("El acceso a tu banco caducó. Vuelve a conectarlo.", 401);
+      return error("El acceso a este banco caducó. Conéctalo de nuevo.", 401);
     }
     return handleApiError(err);
   }

@@ -18,7 +18,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       >
         <ThemeProvider>{children}</ThemeProvider>
         <Toaster
-          position="bottom-right"
+          position="top-center"
           richColors
           toastOptions={{
             style: { borderRadius: "0.75rem" },

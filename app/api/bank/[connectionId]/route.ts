@@ -4,11 +4,17 @@ import { deleteSession } from "@/lib/enablebanking";
 import { error, handleApiError, json } from "@/lib/api";
 import { sequelize } from "@/lib/db";
 
-export async function DELETE() {
+type Params = { params: Promise<{ connectionId: string }> };
+
+export async function DELETE(_req: Request, { params }: Params) {
   try {
     const userId = await requireUserId();
-    const connection = await BankConnection.findOne({ where: { userId } });
-    if (!connection) return error("No hay ninguna cuenta bancaria conectada", 404);
+    const { connectionId } = await params;
+
+    const connection = await BankConnection.findOne({
+      where: { id: connectionId, userId },
+    });
+    if (!connection) return error("Cuenta bancaria no encontrada", 404);
 
     if (connection.sessionId) {
       try {
@@ -19,7 +25,10 @@ export async function DELETE() {
     }
 
     await sequelize.transaction(async (t) => {
-      await ImportDraft.destroy({ where: { userId }, transaction: t });
+      await ImportDraft.destroy({
+        where: { userId, connectionId },
+        transaction: t,
+      });
       await connection.destroy({ transaction: t });
     });
 

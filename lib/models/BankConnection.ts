@@ -18,9 +18,12 @@ export class BankConnection extends Model<
   declare institutionId: string;
   declare institutionName: CreationOptional<string | null>;
   declare authState: CreationOptional<string | null>;
+  declare accountExternalId: CreationOptional<string | null>;
+  declare accountName: CreationOptional<string | null>;
+  declare accountIban: CreationOptional<string | null>;
+  declare accountCurrency: CreationOptional<string | null>;
   declare status: CreationOptional<string | null>;
   declare validUntil: CreationOptional<Date | null>;
-  declare accountsJson: CreationOptional<string | null>;
   declare lastSyncedAt: CreationOptional<Date | null>;
   declare createdAt: CreationOptional<Date>;
   declare updatedAt: CreationOptional<Date>;
@@ -45,7 +48,6 @@ BankConnection.init(
     sessionId: {
       type: DataTypes.STRING,
       allowNull: true,
-      unique: true,
     },
     institutionId: {
       type: DataTypes.STRING,
@@ -59,16 +61,28 @@ BankConnection.init(
       type: DataTypes.STRING,
       allowNull: true,
     },
+    accountExternalId: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    accountName: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    accountIban: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    accountCurrency: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
     status: {
       type: DataTypes.STRING,
       allowNull: true,
     },
     validUntil: {
       type: DataTypes.DATE,
-      allowNull: true,
-    },
-    accountsJson: {
-      type: DataTypes.TEXT,
       allowNull: true,
     },
     lastSyncedAt: {
