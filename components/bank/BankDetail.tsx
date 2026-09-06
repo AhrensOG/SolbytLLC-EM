@@ -84,6 +84,7 @@ export function BankDetail() {
 
   const [syncing, setSyncing] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
+  const [confirmDisconnect, setConfirmDisconnect] = useState(false);
   const [bulkLoading, setBulkLoading] = useState<string | null>(null);
   const [pendingCategoryId, setPendingCategoryId] = useState("");
   const [categoryMap, setCategoryMap] = useState<Record<string, string>>({});
@@ -214,6 +215,11 @@ export function BankDetail() {
   }
 
   async function handleDisconnect() {
+    await doDisconnect();
+    setConfirmDisconnect(false);
+  }
+
+  async function doDisconnect() {
     setDisconnecting(true);
     const res = await fetch(`/api/bank/${id}`, { method: "DELETE" });
     setDisconnecting(false);
@@ -278,8 +284,7 @@ export function BankDetail() {
           size="sm"
           variant="ghost"
           className="text-destructive hover:bg-destructive/10"
-          loading={disconnecting}
-          onClick={handleDisconnect}
+          onClick={() => setConfirmDisconnect(true)}
         >
           <Unlink className="h-4 w-4" /> Desconectar
         </Button>
@@ -549,6 +554,28 @@ export function BankDetail() {
             </div>
           </div>
         )}
+      </Modal>
+
+      <Modal
+        open={confirmDisconnect}
+        onClose={() => setConfirmDisconnect(false)}
+        title="Desconectar cuenta"
+      >
+        <div className="flex flex-col gap-4">
+          <p className="text-sm text-muted-foreground">
+            Se eliminará esta cuenta bancaria y sus movimientos pendientes de la
+            aplicación. Tendrás que volver a conectarla si quieres sincronizarla
+            otra vez.
+          </p>
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" onClick={() => setConfirmDisconnect(false)}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" loading={disconnecting} onClick={handleDisconnect}>
+              Desconectar definitivamente
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );

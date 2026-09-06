@@ -36,6 +36,9 @@ export async function POST(req: NextRequest) {
     if (err instanceof EnableError && err.code === "EXPIRED_SESSION") {
       return error("El acceso a este banco caducó. Conéctalo de nuevo.", 401);
     }
+    if (err instanceof Error && err.message.includes("cuentas vinculadas")) {
+      return error(err.message, 400);
+    }
     return handleApiError(err);
   }
 }

@@ -7,6 +7,8 @@ import {
 } from "@/lib/models";
 import {
   getAccountTransactions,
+  getSession,
+  getAccountDetails,
   type EnableTransaction,
 } from "@/lib/enablebanking";
 
@@ -71,11 +73,65 @@ export async function syncBankTransactions(
   if (!connection.sessionId) {
     throw new Error("La conexión bancaria no tiene sesión activa");
   }
+
   if (!connection.accountExternalId) {
-    throw new Error("La conexión no tiene cuenta asignada");
+    const session = await getSession(connection.sessionId);
+    const accountIds = session.accountIds;
+    if (accountIds.length === 0) {
+      throw new Error(
+        "No se encontraron cuentas vinculadas a esta conexión. Conecta la cuenta de nuevo.",
+      );
+    }
+
+    for (const accountId of accountIds.slice(1)) {
+      const existing = await BankConnection.findOne({
+        where: {
+          userId,
+          institutionId: connection.institutionId,
+          accountExternalId: accountId,
+        },
+      });
+      if (!existing) {
+        const details = await getAccountDetails(accountId).catch(() => ({
+          id: accountId,
+          iban: null,
+          name: null,
+          currency: null,
+        }));
+        await BankConnection.create({
+          userId,
+          provider: "enablebanking",
+          sessionId: connection.sessionId,
+          institutionId: connection.institutionId,
+          institutionName: connection.institutionName,
+          accountExternalId: accountId,
+          accountName: details.name,
+          accountIban: details.iban,
+          accountCurrency: details.currency,
+          status: "linked",
+          validUntil: session.validUntil
+            ? new Date(session.validUntil)
+            : connection.validUntil,
+        });
+      }
+    }
+
+    const primaryDetails = await getAccountDetails(accountIds[0]).catch(() => ({
+      id: accountIds[0],
+      iban: null,
+      name: null,
+      currency: null,
+    }));
+    await connection.update({
+      accountExternalId: accountIds[0],
+      accountName: primaryDetails.name ?? connection.accountName,
+      accountIban: primaryDetails.iban ?? connection.accountIban,
+      accountCurrency: primaryDetails.currency ?? connection.accountCurrency,
+      status: "linked",
+    });
   }
 
-  const transactions = await getAccountTransactions(connection.accountExternalId, {
+  const transactions = await getAccountTransactions(connection.accountExternalId!, {
     dateFrom,
     psuHeaders: opts.psuHeaders,
   });
