@@ -4,6 +4,7 @@ import { useState } from "react";
 import useSWR from "swr";
 import { toast } from "sonner";
 import Link from "next/link";
+import { preloadBankDetail } from "@/lib/nav-prefetch";
 import { Landmark, Link2, Plus, RefreshCw, Search } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -187,6 +188,8 @@ export function BankView() {
               <Link
                 key={connection.id}
                 href={`/bank/${connection.id}`}
+                onPointerDown={() => preloadBankDetail(connection.id)}
+                onMouseEnter={() => preloadBankDetail(connection.id)}
                 className="flex items-center gap-3 rounded-xl border border-border p-4 transition-colors hover:bg-muted/40 active:scale-[0.99]"
               >
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">

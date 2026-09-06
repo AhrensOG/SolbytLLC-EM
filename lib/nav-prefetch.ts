@@ -47,6 +47,8 @@ export function navPrefetchKeys(href: string, cacheGet?: CacheGet): string[] {
       return ["/api/recurring-expenses", "/api/categories"];
     case "/teams":
       return ["/api/teams", "/api/invitations"];
+    case "/bank":
+      return ["/api/bank/status", "/api/users/me", "/api/currencies"];
     case "/settings":
       return ["/api/users/me", "/api/currencies"];
     default:
@@ -78,4 +80,9 @@ export function preloadTeamData(teamId: string, cacheGet?: CacheGet) {
   for (const key of keys) {
     preload(key, fetcher);
   }
+}
+
+export function preloadBankDetail(connectionId: string) {
+  preload("/api/bank/status", fetcher);
+  preload(`/api/bank/drafts?connectionId=${connectionId}`, fetcher);
 }

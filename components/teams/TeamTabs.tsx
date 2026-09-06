@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSWRConfig } from "swr";
+import { preloadTeamData } from "@/lib/nav-prefetch";
 import {
   BarChart3,
   ArrowLeftRight,
@@ -26,6 +28,7 @@ interface Tab {
 
 export function TeamTabs({ teamId }: TeamTabsProps) {
   const pathname = usePathname();
+  const { cache } = useSWRConfig();
 
   const tabs: Tab[] = [
     { href: `/teams/${teamId}`, label: "Resumen", icon: BarChart3 },
@@ -45,6 +48,8 @@ export function TeamTabs({ teamId }: TeamTabsProps) {
           <Link
             key={tab.href}
             href={tab.href}
+            onPointerDown={() => preloadTeamData(teamId, (k) => cache.get(k))}
+            onMouseEnter={() => preloadTeamData(teamId, (k) => cache.get(k))}
             className={cn(
               "flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition-colors active:scale-95 active:bg-muted",
               active

@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
+import { preloadNavData } from "@/lib/nav-prefetch";
 
 export function LoginForm() {
   const router = useRouter();
@@ -32,6 +33,7 @@ export function LoginForm() {
     }
 
     toast.success("Bienvenido de vuelta");
+    preloadNavData("/dashboard");
     router.push("/dashboard");
     router.refresh();
   }
