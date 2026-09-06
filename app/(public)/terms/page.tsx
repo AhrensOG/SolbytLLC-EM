@@ -35,7 +35,7 @@ const sections = [
   {
     title: "4. Conexión bancaria y servicios de terceros",
     body: [
-      "La Aplicación ofrece, de forma opcional, la conexión de cuentas bancarias a través de proveedores de servicios de información sobre cuentas autorizados y regulados (como GoCardless), con el fin de importar automáticamente los movimientos que el usuario autorice.",
+      "La Aplicación ofrece, de forma opcional, la conexión de cuentas bancarias a través de proveedores de servicios de información sobre cuentas autorizados y regulados (como Enable Banking), con el fin de importar automáticamente los movimientos que el usuario autorice.",
       "La conexión bancaria es un servicio de terceros: la autenticación se realiza en la web de la entidad bancaria del usuario y el acceso a los datos es de SOLO LECTURA, sin capacidad de iniciar pagos ni transferencias.",
       "El consentimiento para compartir los datos bancarios se presta por el propio usuario en el flujo habilitado a tal efecto y puede revocarse en cualquier momento, desde la Aplicación o desde la entidad bancaria.",
       "La Aplicación no es una entidad de pago ni un banco, y no ofrece servicios financieros regulados. Los movimientos que no provengan de la conexión bancaria deben ser introducidos manualmente por el usuario.",

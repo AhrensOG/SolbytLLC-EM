@@ -37,7 +37,7 @@ const sections = [
   {
     title: "4. Destinatarios de los datos",
     body: [
-      "GoCardless Ltd. (o GoCardless SAS en el EEE), entidad autorizada como proveedor de servicios de información sobre cuentas (AISP), como encargado del tratamiento en relación con la conexión bancaria y la obtención de movimientos. El acceso a los datos bancarios es de SOLO LECTURA: ningún proveedor puede iniciar pagos ni mover fondos con este acceso.",
+      "Enable Banking, proveedor técnico de conectividad bancaria conforme a PSD2, como encargado del tratamiento en relación con la conexión bancaria y la obtención de movimientos. El acceso a los datos bancarios es de SOLO LECTURA: ningún proveedor puede iniciar pagos ni mover fondos con este acceso.",
       "Proveedores de infraestructura (alojamiento, base de datos y procesamiento de pagos si procede), que actúan como encargados del tratamiento bajo acuerdos de protección de datos.",
       "Autoridades públicas, cuando exista obligación legal.",
       "No vendemos, alquilamos ni cedemos datos personales a terceros con fines comerciales.",

@@ -14,10 +14,12 @@ export class BankConnection extends Model<
   declare id: CreationOptional<string>;
   declare userId: string;
   declare provider: CreationOptional<string>;
-  declare requisitionId: string;
+  declare sessionId: CreationOptional<string | null>;
   declare institutionId: string;
   declare institutionName: CreationOptional<string | null>;
+  declare authState: CreationOptional<string | null>;
   declare status: CreationOptional<string | null>;
+  declare validUntil: CreationOptional<Date | null>;
   declare accountsJson: CreationOptional<string | null>;
   declare lastSyncedAt: CreationOptional<Date | null>;
   declare createdAt: CreationOptional<Date>;
@@ -38,11 +40,11 @@ BankConnection.init(
     provider: {
       type: DataTypes.STRING,
       allowNull: false,
-      defaultValue: "gocardless",
+      defaultValue: "enablebanking",
     },
-    requisitionId: {
+    sessionId: {
       type: DataTypes.STRING,
-      allowNull: false,
+      allowNull: true,
       unique: true,
     },
     institutionId: {
@@ -53,8 +55,16 @@ BankConnection.init(
       type: DataTypes.STRING,
       allowNull: true,
     },
+    authState: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
     status: {
       type: DataTypes.STRING,
+      allowNull: true,
+    },
+    validUntil: {
+      type: DataTypes.DATE,
       allowNull: true,
     },
     accountsJson: {

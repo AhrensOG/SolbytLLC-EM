@@ -1,12 +1,9 @@
 import { NextRequest } from "next/server";
+import { randomUUID } from "crypto";
 import { z } from "zod";
 import { requireUserId } from "@/lib/auth-helpers";
 import { BankConnection } from "@/lib/models";
-import {
-  createRequisition,
-  deleteRequisition,
-  getInstitutions,
-} from "@/lib/gocardless";
+import { deleteSession, startAuth } from "@/lib/enablebanking";
 import { error, handleApiError, json } from "@/lib/api";
 
 const connectSchema = z.object({
@@ -20,38 +17,40 @@ export async function POST(req: NextRequest) {
     const parsed = connectSchema.safeParse(body);
     if (!parsed.success) return error("Datos inválidos", 422);
 
-    const institutionId = parsed.data.institutionId;
-    const origin = new URL(req.url).origin;
+    const [name, country] = parsed.data.institutionId.split("|");
+    if (!name || !country) return error("Banco inválido", 422);
+
+    const baseUrl = process.env.AUTH_URL ?? new URL(req.url).origin;
 
     const existing = await BankConnection.findOne({ where: { userId } });
     if (existing) {
-      try {
-        await deleteRequisition(existing.requisitionId);
-      } catch {
-        // Ignore remote cleanup failures.
+      if (existing.sessionId) {
+        try {
+          await deleteSession(existing.sessionId);
+        } catch {
+          // Ignore remote cleanup failures.
+        }
       }
       await existing.destroy();
     }
 
-    const institutions = await getInstitutions("ES");
-    const institution = institutions.find((i) => i.id === institutionId);
-
-    const { requisitionId, link } = await createRequisition(
-      institutionId,
-      `${origin}/bank/callback`,
-      userId,
-    );
+    const state = randomUUID();
+    const { url } = await startAuth({
+      aspsp: { name, country },
+      redirectUrl: `${baseUrl}/bank/callback`,
+      state,
+    });
 
     await BankConnection.create({
       userId,
-      institutionId,
-      institutionName: institution?.name ?? null,
-      requisitionId,
+      institutionId: `${name}|${country}`,
+      institutionName: name,
+      authState: state,
       status: "pending",
       accountsJson: null,
     });
 
-    return json({ link });
+    return json({ link: url });
   } catch (err) {
     return handleApiError(err);
   }

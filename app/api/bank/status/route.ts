@@ -17,8 +17,12 @@ export async function GET() {
       connection: connection
         ? {
             id: connection.id,
+            institutionId: connection.institutionId,
             institutionName: connection.institutionName,
             status: connection.status,
+            validUntil: connection.validUntil
+              ? new Date(connection.validUntil).toISOString()
+              : null,
             lastSyncedAt: connection.lastSyncedAt,
             accountCount: connection.accountsJson
               ? (JSON.parse(connection.accountsJson) as unknown[]).length

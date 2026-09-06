@@ -16,13 +16,28 @@ import { useCategories } from "@/lib/hooks/useCategories";
 import { formatDate, formatMoney } from "@/lib/format";
 import { cn } from "@/lib/cn";
 
+const COUNTRIES = [
+  { code: "ES", label: "España" },
+  { code: "FR", label: "Francia" },
+  { code: "DE", label: "Alemania" },
+  { code: "IT", label: "Italia" },
+  { code: "PT", label: "Portugal" },
+  { code: "NL", label: "Países Bajos" },
+  { code: "BE", label: "Bélgica" },
+  { code: "IE", label: "Irlanda" },
+  { code: "AT", label: "Austria" },
+  { code: "PL", label: "Polonia" },
+];
+
 interface BankStatus {
   connected: boolean;
   pendingCount: number;
   connection: {
     id: string;
+    institutionId: string | null;
     institutionName: string | null;
     status: string | null;
+    validUntil: string | null;
     lastSyncedAt: string | null;
     accountCount: number;
   } | null;
@@ -31,8 +46,7 @@ interface BankStatus {
 interface Institution {
   id: string;
   name: string;
-  logo: string | null;
-  bic: string | null;
+  country: string;
 }
 
 interface BankDraft {
@@ -62,6 +76,7 @@ export function BankView() {
   const [institutionsOpen, setInstitutionsOpen] = useState(false);
   const [institutions, setInstitutions] = useState<Institution[]>([]);
   const [institutionsLoading, setInstitutionsLoading] = useState(false);
+  const [country, setCountry] = useState("ES");
   const [search, setSearch] = useState("");
   const [linking, setLinking] = useState(false);
   const [syncing, setSyncing] = useState(false);
@@ -83,12 +98,10 @@ export function BankView() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status?.connected]);
 
-  async function openInstitutions() {
-    setInstitutionsOpen(true);
-    if (institutions.length > 0) return;
+  async function loadInstitutions(countryCode: string) {
     setInstitutionsLoading(true);
     try {
-      const res = await fetch("/api/bank/institutions?country=ES");
+      const res = await fetch(`/api/bank/institutions?country=${countryCode}`);
       if (!res.ok) throw new Error();
       setInstitutions(await res.json());
     } catch {
@@ -96,6 +109,19 @@ export function BankView() {
     } finally {
       setInstitutionsLoading(false);
     }
+  }
+
+  async function openInstitutions() {
+    setInstitutionsOpen(true);
+    if (institutions.length === 0) {
+      void loadInstitutions(country);
+    }
+  }
+
+  async function handleCountryChange(code: string) {
+    setCountry(code);
+    setSearch("");
+    void loadInstitutions(code);
   }
 
   async function handleLink(institutionId: string) {
@@ -109,6 +135,24 @@ export function BankView() {
       const body = await res.json().catch(() => null);
       setLinking(false);
       toast.error(body?.error ?? "No se pudo iniciar la conexión");
+      return;
+    }
+    const data = await res.json();
+    window.location.href = data.link;
+  }
+
+  async function handleRenew() {
+    if (!status?.connection?.institutionId) return;
+    setLinking(true);
+    const res = await fetch("/api/bank/connect", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ institutionId: status.connection.institutionId }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => null);
+      setLinking(false);
+      toast.error(body?.error ?? "No se pudo renovar el acceso");
       return;
     }
     const data = await res.json();
@@ -233,11 +277,25 @@ export function BankView() {
                     ? new Date(status.connection.lastSyncedAt).toLocaleString("es")
                     : "nunca"}
                 </p>
+                {status.connection.validUntil && (
+                  <p className="text-xs text-muted-foreground">
+                    Acceso válido hasta{" "}
+                    {new Date(status.connection.validUntil).toLocaleDateString("es")}
+                  </p>
+                )}
               </div>
             </div>
             <div className="flex flex-col gap-2 sm:flex-row">
               <Button size="sm" variant="outline" loading={syncing} onClick={syncNow}>
                 <RefreshCw className="h-4 w-4" /> Sincronizar
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                loading={linking}
+                onClick={handleRenew}
+              >
+                Renovar
               </Button>
               <Button
                 size="sm"
@@ -263,8 +321,8 @@ export function BankView() {
                   Conecta tu banco
                 </h3>
                 <p className="text-sm text-muted-foreground">
-                  Importa tus movimientos automáticamente (solo lectura, a
-                  través de GoCardless).
+                  Importa tus movimientos automáticamente (solo lectura, vía
+                  open banking / Enable Banking).
                 </p>
               </div>
             </div>
@@ -396,6 +454,18 @@ export function BankView() {
         title="Selecciona tu banco"
       >
         <div className="flex flex-col gap-4">
+          <Select
+            label="País"
+            value={country}
+            onChange={(e) => handleCountryChange(e.target.value)}
+          >
+            {COUNTRIES.map((c) => (
+              <option key={c.code} value={c.code}>
+                {c.label}
+              </option>
+            ))}
+          </Select>
+
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -419,20 +489,14 @@ export function BankView() {
                     onClick={() => handleLink(institution.id)}
                     className="flex w-full items-center gap-3 rounded-lg px-2 py-2.5 text-left transition-colors hover:bg-muted"
                   >
-                    {institution.logo ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={institution.logo}
-                        alt=""
-                        className="h-8 w-8 rounded-lg object-contain"
-                      />
-                    ) : (
-                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-                        <Landmark className="h-4 w-4" />
-                      </div>
-                    )}
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                      <Landmark className="h-4 w-4" />
+                    </div>
                     <span className="flex-1 text-sm font-medium text-card-foreground">
                       {institution.name}
+                    </span>
+                    <span className="text-xs uppercase text-muted-foreground">
+                      {institution.country}
                     </span>
                   </button>
                 </li>

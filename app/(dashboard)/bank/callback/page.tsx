@@ -13,17 +13,18 @@ export default function BankCallbackPage() {
     if (handled.current) return;
     handled.current = true;
 
-    const requisitionId = searchParams.get("ref");
+    const code = searchParams.get("code");
+    const state = searchParams.get("state");
     const errorParam = searchParams.get("error");
 
     (async () => {
       if (errorParam) {
         toast.error("No se pudo completar la conexión bancaria");
-      } else if (requisitionId) {
+      } else if (code && state) {
         const res = await fetch("/api/bank/callback", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ requisitionId }),
+          body: JSON.stringify({ code, state }),
         });
         if (res.ok) {
           toast.success("Cuenta bancaria conectada");

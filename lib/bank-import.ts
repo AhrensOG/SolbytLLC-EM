@@ -8,9 +8,9 @@ import {
 import {
   getAccountDetails,
   getAccountTransactions,
-  getRequisition,
-} from "@/lib/gocardless";
-import type { GcTransaction } from "@/lib/gocardless";
+  getSession,
+  type EnableTransaction,
+} from "@/lib/enablebanking";
 
 export const IMPORT_KEY_PREFIX = "b:";
 
@@ -30,16 +30,13 @@ export function dateFromDaysAgo(days: number): string {
   return `${d.getFullYear()}-${mm}-${dd}`;
 }
 
-function normalizeGcTx(tx: GcTransaction): {
-  isExpense: boolean;
+function normalizeTx(tx: EnableTransaction): {
   amount: number;
   date: string;
   currencyCode: string;
   description: string;
 } {
-  const isExpense = tx.amount < 0;
   return {
-    isExpense,
     amount: tx.amount,
     date: tx.bookingDate || new Date().toISOString().slice(0, 10),
     currencyCode: tx.currency || "EUR",
@@ -68,18 +65,30 @@ async function suggestCategory(
 export async function syncBankTransactions(
   connection: BankConnection,
   userId: string,
-  opts: { days?: number } = {},
+  opts: { days?: number; psuHeaders?: Record<string, string> } = {},
 ): Promise<{ created: number; skipped: number }> {
   const days = opts.days ?? defaultSyncDays();
   const dateFrom = dateFromDaysAgo(days);
 
-  const requisition = await getRequisition(connection.requisitionId);
-  const accountIds = requisition.accounts;
+  if (!connection.sessionId) {
+    throw new Error("La conexión bancaria no tiene sesión activa");
+  }
+
+  const session = await getSession(connection.sessionId);
+  const accountIds = session.accountIds;
+  if (session.validUntil) {
+    await connection.update({ validUntil: new Date(session.validUntil) });
+  }
   if (accountIds.length === 0) {
     return { created: 0, skipped: 0 };
   }
 
-  const accounts: { id: string; iban: string | null; name: string | null; currency: string | null }[] = [];
+  const accounts: {
+    id: string;
+    iban: string | null;
+    name: string | null;
+    currency: string | null;
+  }[] = [];
   for (const accountId of accountIds) {
     try {
       accounts.push(await getAccountDetails(accountId));
@@ -87,23 +96,19 @@ export async function syncBankTransactions(
       // Unknown/inaccessible account: skip.
     }
   }
-  if (connection.status !== requisition.status) {
-    await connection.update({ status: requisition.status });
-  }
 
-  const newAccounts = accounts.map((a) => ({
-    id: a.id,
-    iban: a.iban,
-    name: a.name,
-    currency: a.currency,
-  }));
-  await connection.update({ accountsJson: JSON.stringify(newAccounts) });
+  await connection.update({
+    accountsJson: JSON.stringify(accounts),
+  });
 
   let created = 0;
   let skipped = 0;
 
   for (const account of accounts) {
-    const transactions = await getAccountTransactions(account.id, dateFrom);
+    const transactions = await getAccountTransactions(account.id, {
+      dateFrom,
+      psuHeaders: opts.psuHeaders,
+    });
     if (transactions.length === 0) continue;
 
     const importKeys = transactions.map((tx) =>
@@ -131,7 +136,7 @@ export async function syncBankTransactions(
     });
 
     for (const tx of pending) {
-      const normalized = normalizeGcTx(tx);
+      const normalized = normalizeTx(tx);
       const categoryId = await suggestCategory(
         normalized.description,
         userId,

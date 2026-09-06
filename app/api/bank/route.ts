@@ -1,6 +1,6 @@
 import { requireUserId } from "@/lib/auth-helpers";
 import { BankConnection, ImportDraft } from "@/lib/models";
-import { deleteRequisition } from "@/lib/gocardless";
+import { deleteSession } from "@/lib/enablebanking";
 import { error, handleApiError, json } from "@/lib/api";
 import { sequelize } from "@/lib/db";
 
@@ -10,10 +10,12 @@ export async function DELETE() {
     const connection = await BankConnection.findOne({ where: { userId } });
     if (!connection) return error("No hay ninguna cuenta bancaria conectada", 404);
 
-    try {
-      await deleteRequisition(connection.requisitionId);
-    } catch {
-      // Ignore remote cleanup failures.
+    if (connection.sessionId) {
+      try {
+        await deleteSession(connection.sessionId);
+      } catch {
+        // Ignore remote cleanup failures.
+      }
     }
 
     await sequelize.transaction(async (t) => {
