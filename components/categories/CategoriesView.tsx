@@ -137,7 +137,7 @@ export function CategoriesView() {
                 {cat.name}
               </span>
               {!selectMode && (
-                <div className="flex items-center gap-0.5 opacity-100 transition-opacity group-hover:opacity-100 md:opacity-0">
+                <div className="flex items-center gap-0.5 opacity-100 transition-opacity pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100">
                   <button
                     onClick={() => setEditing(cat)}
                     aria-label="Editar"

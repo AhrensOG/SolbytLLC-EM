@@ -67,7 +67,7 @@ export function TeamCategoriesView({ teamId }: { teamId: string }) {
               <span className="flex-1 truncate text-sm font-medium text-card-foreground">
                 {cat.name}
               </span>
-              <div className="flex items-center gap-0.5 opacity-100 transition-opacity group-hover:opacity-100 md:opacity-0">
+              <div className="flex items-center gap-0.5 opacity-100 transition-opacity pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100">
                 <button
                   onClick={() => setEditing(cat)}
                   aria-label="Editar"
