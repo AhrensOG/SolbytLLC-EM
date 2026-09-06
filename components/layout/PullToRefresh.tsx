@@ -32,11 +32,16 @@ export function PullToRefresh({ children }: { children: React.ReactNode }) {
     state.running = true;
     setRefreshing(true);
     setDistance(72);
+    const started = Date.now();
     try {
       await Promise.all([
         mutate(() => true, undefined, { revalidate: true }),
         router.refresh(),
       ]);
+      const elapsed = Date.now() - started;
+      if (elapsed < 450) {
+        await new Promise((resolve) => setTimeout(resolve, 450 - elapsed));
+      }
     } finally {
       state.running = false;
       state.distance = 0;
@@ -130,10 +135,9 @@ export function PullToRefresh({ children }: { children: React.ReactNode }) {
       <div
         className="relative z-10 min-h-[100dvh] bg-background"
         style={{
-          transform: `translateY(${translate}px)`,
+          marginTop: `${translate}px`,
           transition:
-            dragging || refreshing ? "none" : "transform 0.25s ease",
-          willChange: "transform",
+            dragging || refreshing ? "none" : "margin-top 0.25s ease",
         }}
       >
         {children}
